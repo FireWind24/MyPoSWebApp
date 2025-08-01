@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MALIK MEDICAL STORE</title>
+  <style>
+    @font-face {
+      font-family: 'Digital-7';
+      src: url('https://www.dafont.com/digital-7.font') format('truetype');
+    }
+    
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #222;
+      color: #ddd;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+    
+    .container {
+      display: flex;
+      width: 100%;
+      max-width: 1200px;
+      gap: 20px;
+    }
+    
+    .invoice-section {
+      flex: 1;
+      background-color: #333;
+      padding: 15px;
+      border-radius: 5px;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .register-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .display {
+      font-family: 'Digital-7', monospace;
+      background-color: #0a280a;
+      color: #7fff7f;
+      padding: 15px;
+      border: 10px solid #444;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      font-size: 24px;
+      min-height: 100px;
+      text-align: right;
+      box-shadow: inset 0 0 10px #000;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .current-item {
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+    
+    .total-display {
+      font-size: 28px;
+      border-top: 2px solid #7fff7f;
+      padding-top: 10px;
+    }
+    
+    .cash-input-container {
+      margin-top: 10px;
+      display: none;
+    }
+    
+    .cash-input {
+      width: 100%;
+      padding: 8px;
+      background-color: #0a280a;
+      border: 1px solid #7fff7f;
+      color: #7fff7f;
+      font-family: 'Digital-7', monospace;
+      font-size: 20px;
+      text-align: right;
+    }
+    
+    .cash-display {
+      font-size: 20px;
+      margin-top: 5px;
+    }
+    
+    .change-display {
+      font-size: 22px;
+      color: #2ecc71;
+      margin-top: 5px;
+    }
+    
+    .department-buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .department-btn {
+      background-color: #444;
+      color: white;
+      border: none;
+      padding: 15px 5px;
+      font-size: 14px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .department-btn:hover {
+      background-color: #555;
+    }
+    
+    .input-fields {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .input-fields input {
+      flex: 1;
+      padding: 10px;
+      background-color: #444;
+      border: none;
+      color: white;
+      border-radius: 5px;
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .action-btn {
+      flex: 1;
+      padding: 15px;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .add-btn {
+      background-color: #27ae60;
+      color: white;
+    }
+    
+    .add-btn:hover {
+      background-color: #2ecc71;
+    }
+    
+    .clear-btn {
+      background-color: #e74c3c;
+      color: white;
+    }
+    
+    .clear-btn:hover {
+      background-color: #c0392b;
+    }
+    
+    .checkout-btn {
+      background-color: #3498db;
+      color: white;
+    }
+    
+    .checkout-btn:hover {
+      background-color: #2980b9;
+    }
+    
+    .receipt {
+      white-space: pre-wrap;
+      background: #111;
+      color: #7fff7f;
+      padding: 15px;
+      border: 1px solid #444;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      min-height: 200px;
+      margin-bottom: 20px;
+    }
+    
+    .error {
+      color: #e74c3c;
+      margin: 10px 0;
+    }
+    
+    .success {
+      color: #2ecc71;
+    }
+    
+    .item-list {
+      border: 1px solid #444;
+      padding: 10px;
+      border-radius: 5px;
+      background: #222;
+      flex-grow: 1;
+    }
+    
+    .item-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px dashed #444;
+    }
+    
+    .item-row:last-child {
+      border-bottom: none;
+    }
+    
+    .reset-btn {
+      background-color: #f39c12;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+    
+    .reset-btn:hover {
+      background-color: #e67e22;
+    }
+    
+    .invoice-actions {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    
+    .invoice-action-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .print-btn {
+      background-color: #9b59b6;
+      color: white;
+    }
+    
+    .print-btn:hover {
+      background-color: #8e44ad;
+    }
+    
+    .download-btn {
+      background-color: #1abc9c;
+      color: white;
+    }
+    
+    .download-btn:hover {
+      background-color: #16a085;
+    }
+    
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      .receipt, .receipt * {
+        visibility: visible;
+      }
+      .receipt {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 15px;
+        border: none;
+        background: white;
+        color: black;
+        font-family: 'Courier New', monospace;
+        white-space: pre-wrap;
+      }
+    }
+    
+    .department-management {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    
+    .department-input {
+      flex: 1;
+      padding: 10px;
+      background-color: #444;
+      border: none;
+      color: white;
+      border-radius: 5px;
+    }
+    
+    .add-dept-btn {
+      background-color: #27ae60;
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    
+    .context-menu {
+      position: absolute;
+      background: #333;
+      border: 1px solid #555;
+      border-radius: 5px;
+      padding: 5px 0;
+      z-index: 100;
+      display: none;
+    }
+    
+    .context-menu button {
+      display: block;
+      width: 100%;
+      padding: 5px 10px;
+      text-align: left;
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+    }
+    
+    .context-menu button:hover {
+      background: #444;
+    }
+    .cash-input-container {
+    margin-top: -15px; /* Adjust this value to move it up/down */
+    margin-left: 10px; /* Add left margin if needed */
+    margin-right: 10px; /* Add right margin if needed */
+    width: calc(100% - 20px); /* Adjust width accounting for margins */
+  }
+
+  .cash-input {
+    width: 100%;
+    padding: 8px;
+    background-color: #0a280a;
+    border: 1px solid #7fff7f;
+    color: #7fff7f;
+    font-family: 'Digital-7', monospace;
+    font-size: 20px;
+    text-align: right;
+    /* Add these for precise positioning */
+    position: relative;
+    left: 0; /* Adjust if needed */
+    top: 0; /* Adjust if needed */
+  }
+  .clear-storage-btn {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-weight: bold;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.clear-storage-btn:hover {
+  background-color: #c0392b;
+}
+.invoice-action-btn {
+    background-color: #16a085;
+    color: white;
+    padding: 10px 18px;
+    font-size: 14px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    min-width: 150px;
+    text-align: center;
+    transition: background-color 0.2s ease;
+  }
+
+  .invoice-action-btn:hover {
+    background-color: #138d75;
+  }
+
+  .import-btn {
+    background-color: #8e44ad;
+    position: relative;
+    overflow: hidden;
+  }
+  .import-btn:hover {
+  background-color: #732d91; /* slightly darker shade of purple */
+}
+
+  .import-btn input[type="file"] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+  }
+
+  .clear-btn {
+    background-color: #e74c3c;
+  }
+
+  .clear-btn:hover {
+    background-color: #c0392b;
+  }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="invoice-section">
+      <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+  <button class="invoice-action-btn" onclick="exportCSV()">EXPORT CSV</button>
+
+  <label class="invoice-action-btn import-btn">
+    IMPORT CSV
+    <input type="file" accept=".csv" onchange="importCSV(event)" />
+  </label>
+
+  <button class="invoice-action-btn clear-btn" onclick="clearInvoiceStorage()">🗑️ Clear All Invoices</button>
+</div>
+      <button class="reset-btn" onclick="resetAll()">RESET SYSTEM (CTRL +R)</button>
+      <div class="date-range-selector" style="margin-bottom: 15px;">
+  <h3>Z Report Date Range</h3>
+  <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+    <div>
+      <label style="display: block;">Start Date</label>
+      <input type="datetime-local" id="zReportStart" style="padding: 8px; border-radius: 4px; border: 1px solid #444; background: #333; color: white;">
+    </div>
+    <div>
+      <label style="display: block;">End Date</label>
+      <input type="datetime-local" id="zReportEnd" style="padding: 8px; border-radius: 4px; border: 1px solid #444; background: #333; color: white;">
+    </div>
+  </div>
+  <button class="invoice-action-btn" onclick="generateZReport()" style="background-color: #2980b9;">
+  📆 Z REPORT (Today)
+</button>
+
+  <button class="invoice-action-btn" onclick="generateCustomZReport()" style="background-color: #34495e;">GENERATE CUSTOM Z REPORT</button>
+</div>
+      <h2>INVOICE</h2>
+      
+      <div class="invoice-actions">
+        <button class="invoice-action-btn print-btn" onclick="printInvoice()">PRINT INVOICE (CTRL + P)</button>
+        <button class="invoice-action-btn download-btn" onclick="downloadInvoice()">DOWNLOAD INVOICE</button>
+      </div>
+      
+      <div class="receipt" id="receipt">
+        --------------------------
+          MALIK MEDICAL STORE - INVOICE
+        --------------------------
+        Items will appear here
+        --------------------------
+      </div>
+      
+      <div class="item-list" id="itemList">
+        <h3>Current Items</h3>
+        <div id="itemsDisplay"></div>
+        <div id="runningTotal"></div>
+      </div>
+    </div>
+    
+    <div class="register-section">
+      <div class="display" id="display">
+        <div class="current-item" id="currentItem">READY</div>
+        <div class="total-display" id="totalDisplay">TOTAL: Rs 0.00</div>
+        <div class="cash-display" id="cashDisplay"></div>
+        <div class="change-display" id="changeDisplay"></div>
+      </div>
+      
+      <div class="cash-input-container" id="cashInputContainer">
+        <input type="number" id="cashInput" class="cash-input" placeholder="Amount Received (Press Enter)" 
+               onkeydown="handleCashInput(event)">
+      </div>
+      
+      <div class="department-management">
+        <input type="text" id="newDepartment" class="department-input" placeholder="New department name">
+        <button class="add-dept-btn" onclick="addDepartment()">ADD DEPARTMENT</button>
+      </div>
+      
+      <div class="department-buttons" id="departmentButtons">
+        <!-- Departments loaded dynamically -->
+      </div>
+      
+      <div class="input-fields">
+        <input type="text" id="itemName" placeholder="Item Name" onkeydown="handleKeyDown(event)">
+        <input type="number" id="price" placeholder="Price" min="0" step="0.01" onkeydown="handleKeyDown(event)">
+        <input type="number" id="quantity" placeholder="Qty" min="1" value="1" onkeydown="handleKeyDown(event)">
+      </div>
+      
+      <div id="error" class="error"></div>
+      
+      <div class="action-buttons">
+        <button class="action-btn add-btn" onclick="addItem()">ADD ITEM (ENTER)</button>
+        <button class="action-btn clear-btn" onclick="clearItem()">CLEAR (ESC)</button>
+        <button class="action-btn checkout-btn" onclick="initiateCheckout()">CHECKOUT (SHIFT+ENTER)</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="context-menu" id="contextMenu">
+    <button onclick="renameDepartment()">Rename</button>
+    <button onclick="deleteDepartment()">Delete</button>
+  </div>
+
+  <script>
+    // Main application state
+    let items = [];
+    let runningTotal = 0;
+    let currentDepartment = '';
+    let selectedDeptIndex = -1;
+    let departments = [];
+    let cashReceived = 0;
+    let checkoutMode = false;
+    
+    // DOM elements
+    const display = document.getElementById('display');
+    const currentItemDisplay = document.getElementById('currentItem');
+    const totalDisplay = document.getElementById('totalDisplay');
+    const cashDisplay = document.getElementById('cashDisplay');
+    const changeDisplay = document.getElementById('changeDisplay');
+    const itemNameInput = document.getElementById('itemName');
+    const priceInput = document.getElementById('price');
+    const quantityInput = document.getElementById('quantity');
+    const errorElement = document.getElementById('error');
+    const receiptElement = document.getElementById('receipt');
+    const contextMenu = document.getElementById('contextMenu');
+    const deptButtonsContainer = document.getElementById('departmentButtons');
+    const cashInputContainer = document.getElementById('cashInputContainer');
+    const cashInput = document.getElementById('cashInput');
+    
+    // Initialize the application
+    function init() {
+      loadDepartments();
+      itemNameInput.focus();
+      
+      // Set up event listeners
+      document.addEventListener('click', () => {
+        contextMenu.style.display = 'none';
+      });
+    }
+    
+    // Reset everything
+    function resetAll() {
+      items = [];
+      runningTotal = 0;
+      currentDepartment = '';
+      cashReceived = 0;
+      checkoutMode = false;
+      
+      // Reset displays
+      currentItemDisplay.textContent = 'READY';
+      totalDisplay.textContent = 'TOTAL: Rs 0.00';
+      cashDisplay.textContent = '';
+      changeDisplay.textContent = '';
+      document.getElementById('itemsDisplay').innerHTML = '';
+      document.getElementById('runningTotal').innerHTML = '';
+      receiptElement.textContent = `--------------------------
+  MALIK MEDICAL STORE - INVOICE
+--------------------------
+Items will appear here
+--------------------------`;
+      cashInputContainer.style.display = 'none';
+      cashInput.value = '';
+      
+      // Reset inputs
+      itemNameInput.value = '';
+      priceInput.value = '';
+      quantityInput.value = '1';
+      
+      // Focus on item name
+      itemNameInput.focus();
+      
+      showSuccess('System reset!');
+    }
+    
+    // Department management
+    function loadDepartments() {
+      departments = JSON.parse(localStorage.getItem('departments')) || [
+        'MEDICAL STORE', 'GEN STORE', 'HAFIZ ASLAM', 'STILLMENS',
+        'D SOFT', 'BYE BYE', 'SENIOR', 'MILK', 'AZITH',
+        'NEUROBIOTIC', 'HUMULIN', 'VIGA', 'DOSE', 'COCA COLA',
+        'TOY', 'DOCTOR', 'ROSIP', 'HAFIZ', 'FACEMASK', 'MACH', 'NESTLE WATER',
+        'ALWAYS PAD', 'SUGAR TEST', 'ALOPIA OIL'
+      ];
+      
+      if (!localStorage.getItem('departments')) {
+        localStorage.setItem('departments', JSON.stringify(departments));
+      }
+      
+      renderDepartments();
+    }
+    
+    function renderDepartments() {
+      deptButtonsContainer.innerHTML = '';
+      
+      departments.forEach((dept, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'department-btn';
+        btn.textContent = dept;
+        btn.onclick = () => selectDepartment(dept);
+        btn.oncontextmenu = (e) => {
+          e.preventDefault();
+          selectedDeptIndex = index;
+          showContextMenu(e);
+          return false;
+        };
+        deptButtonsContainer.appendChild(btn);
+      });
+    }
+    
+    function addDepartment() {
+      const input = document.getElementById('newDepartment');
+      const name = input.value.trim();
+      
+      if (!name) {
+        showError('Please enter a department name');
+        return;
+      }
+      
+      departments.push(name);
+      saveDepartments();
+      input.value = '';
+      showSuccess('Department added!');
+    }
+    
+    function renameDepartment() {
+      if (selectedDeptIndex === -1) return;
+      
+      const newName = prompt('Enter new name:', departments[selectedDeptIndex]);
+      if (newName && newName.trim()) {
+        departments[selectedDeptIndex] = newName.trim();
+        saveDepartments();
+      }
+    }
+    
+    function deleteDepartment() {
+      if (selectedDeptIndex === -1) return;
+      
+      const userInput = prompt(`Type "del" to delete "${departments[selectedDeptIndex]}":`);
+      if (userInput?.toLowerCase() === 'del') {
+        departments.splice(selectedDeptIndex, 1);
+        saveDepartments();
+      }
+    }
+    
+    function saveDepartments() {
+      localStorage.setItem('departments', JSON.stringify(departments));
+      renderDepartments();
+    }
+    
+    function showContextMenu(e) {
+      contextMenu.style.display = 'block';
+      contextMenu.style.left = `${e.clientX}px`;
+      contextMenu.style.top = `${e.clientY}px`;
+      e.stopPropagation();
+    }
+    
+    // Core register functionality
+    function selectDepartment(department) {
+      currentDepartment = department;
+      currentItemDisplay.textContent = department;
+      itemNameInput.focus();
+    }
+    
+    function handleKeyDown(event) {
+      if (event.key === 'Enter') {
+        if (event.shiftKey) {
+          initiateCheckout();
+        } else if (!checkoutMode) {
+          addItem();
+        }
+      } else if (event.key === 'Escape') {
+        if (checkoutMode) {
+          cancelCheckout();
+        } else {
+          clearItem();
+        }
+      }
+    }
+    
+    function handleCashInput(event) {
+      if (event.key === 'Enter') {
+        completeCheckout();
+      }
+    }
+    
+    function initiateCheckout() {
+      if (items.length === 0) {
+        showError('No items to checkout');
+        return;
+      }
+      
+      checkoutMode = true;
+      cashInputContainer.style.display = 'block';
+      cashInput.focus();
+      showSuccess('Enter amount received and press Enter');
+    }
+    
+    function cancelCheckout() {
+      checkoutMode = false;
+      cashInputContainer.style.display = 'none';
+      cashInput.value = '';
+      showSuccess('Checkout canceled');
+    }
+    
+    function completeCheckout() {
+      const cashAmount = parseFloat(cashInput.value);
+      
+      if (isNaN(cashAmount) || cashAmount < 0) {
+        showError('Invalid amount entered');
+        return;
+      }
+      
+      if (cashAmount < runningTotal) {
+        showError(`Need Rs ${(runningTotal - cashAmount).toFixed(2)} more`);
+        return;
+      }
+      
+      cashReceived = cashAmount;
+      const change = cashAmount - runningTotal;
+      
+      // Update display
+      cashDisplay.textContent = `CASH: Rs ${cashAmount.toFixed(2)}`;
+      changeDisplay.textContent = `CHANGE: Rs ${change.toFixed(2)}`;
+      cashInputContainer.style.display = 'none';
+      cashInput.value = '';
+      
+      generateInvoice();
+      checkoutMode = false;
+      showSuccess('Checkout complete!');
+      
+      saveInvoiceToCSV();
+
+    }
+    
+    function addItem() {
+      if (checkoutMode) return;
+      
+      errorElement.textContent = '';
+      
+      try {
+        const name = itemNameInput.value.trim();
+        const price = parseFloat(priceInput.value);
+        const quantity = parseInt(quantityInput.value);
+        
+        if (!currentDepartment) throw new Error('Please select a department first');
+        if (!name) throw new Error('Item name is required');
+        if (isNaN(price) || price <= 0) throw new Error('Enter valid price');
+        if (isNaN(quantity) || quantity <= 0) throw new Error('Enter valid quantity');
+        
+        const itemTotal = price * quantity;
+        items.push({ department: currentDepartment, name, price, quantity, itemTotal });
+        runningTotal += itemTotal;
+        
+        updateDisplay();
+        clearItemInputs();
+        showSuccess('Item added!');
+        
+      } catch (error) {
+        showError(error.message);
+      }
+    }
+    
+    function updateDisplay() {
+      updateItemDisplay();
+      currentItemDisplay.textContent = `${currentDepartment}: ${items[items.length-1].name}`;
+      totalDisplay.textContent = `TOTAL: Rs ${runningTotal.toFixed(2)}`;
+    }
+    
+    function updateItemDisplay() {
+      const itemsDisplay = document.getElementById('itemsDisplay');
+      const runningTotalElement = document.getElementById('runningTotal');
+      
+      itemsDisplay.innerHTML = '';
+      items.forEach(item => {
+        const itemRow = document.createElement('div');
+        itemRow.className = 'item-row';
+        itemRow.innerHTML = `
+          <span>${item.department} - ${item.name} (${item.quantity} × Rs${item.price.toFixed(2)})</span>
+          <span>Rs${item.itemTotal.toFixed(2)}</span>
+        `;
+        itemsDisplay.appendChild(itemRow);
+      });
+      
+      runningTotalElement.innerHTML = `
+        <div class="item-row" style="font-weight: bold; margin-top: 10px;">
+          <span>Running Total:</span>
+          <span>Rs${runningTotal.toFixed(2)}</span>
+        </div>
+      `;
+    }
+    
+    function clearItemInputs() {
+      itemNameInput.value = '';
+      priceInput.value = '';
+      quantityInput.value = '1';
+      itemNameInput.focus();
+    }
+    
+    function clearItem() {
+      clearItemInputs();
+      currentItemDisplay.textContent = currentDepartment || 'READY';
+    }
+    
+    function generateInvoice() {
+      const now = new Date();
+      
+      let invoiceItems = '';
+      items.forEach(item => {
+        invoiceItems += `${item.department} - ${item.name} (${item.quantity} × Rs${item.price.toFixed(2)}): Rs${item.itemTotal.toFixed(2)}\n`;
+      });
+      
+      const invoice = 
+`--------------------------
+  MALIK MEDICAL STORE - INVOICE
+--------------------------
+Time: ${now.toLocaleString()}
+|CAT|---|ITEM|---|QTY|PRICE|---|TOTAL|
+--------------------------
+${invoiceItems}
+--------------------------
+TOTAL: Rs ${runningTotal.toFixed(2)}
+CASH: Rs ${cashReceived.toFixed(2)}
+CHANGE: Rs ${(cashReceived - runningTotal).toFixed(2)}
+--------------------------
+Thank you!`;
+      
+      receiptElement.textContent = invoice;
+    }
+    
+    function printInvoice() {
+      if (receiptElement.textContent.includes("Items will appear here")) {
+        showError('Please generate an invoice first');
+        return;
+      }
+      
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Invoice</title>
+            <style>
+              body {
+                font-family: 'Courier New', monospace;
+                white-space: pre-wrap;
+                padding: 20px;
+                line-height: 1.4;
+              }
+            </style>
+          </head>
+          <body>${receiptElement.textContent}</body>
+        </html>
+      `);
+      
+      printWindow.document.close();
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 200);
+    }
+    
+    function downloadInvoice() {
+      if (receiptElement.textContent.includes("Items will appear here")) {
+        showError('Please generate an invoice first');
+        return;
+      }
+      
+      const blob = new Blob([receiptElement.textContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Malik-Medical-Invoice-${new Date().toISOString().slice(0,10)}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+    
+    function showError(message) {
+      errorElement.textContent = message;
+      errorElement.className = 'error';
+    }
+    
+    function showSuccess(message) {
+      errorElement.textContent = message;
+      errorElement.className = 'error success';
+    }
+    document.addEventListener('keydown', function(event) {
+ 
+});
+    document.getElementById('newDepartment').addEventListener('keydown', function(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault(); // Prevent form submission/page reload
+        addDepartment(); // Call your existing add department function
+    }
+});
+    document.addEventListener('keydown', function(event) {
+  // Check for Ctrl+Shift+D
+  if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+    event.preventDefault(); // Prevent any browser default behavior
+    document.querySelector('.download-btn').click(); // Simulates clicking the download button
+  }
+});
+// CSV Handling Functions
+function saveInvoiceToCSV() {
+  if (items.length === 0) return;
+  
+  const now = new Date();
+  const csvRow = [
+  now.toISOString(),
+  items.map(i => i.department).join(';'), // ✅ now saving all departments
+  items.map(i => i.name).join(';'),
+  items.map(i => i.quantity).join(';'),
+  items.map(i => i.price).join(';'),
+  runningTotal.toFixed(2),
+  cashReceived.toFixed(2),
+  (cashReceived - runningTotal).toFixed(2)
+].join(',');
+
+  
+  // Get existing CSV or create headers if new
+  let csvContent = localStorage.getItem('invoicesCSV') || 
+    'Timestamp,Department,Items,Quantities,Prices,Subtotal,Cash,Change\n';
+  
+  // Add new row
+  csvContent += csvRow + '\n';
+  localStorage.setItem('invoicesCSV', csvContent);
+  
+  // Debug
+  console.log('Invoice saved to CSV:', csvRow);
+}
+
+function getInvoicesFromCSV(dateFilter = null) {
+  const csvContent = localStorage.getItem('invoicesCSV');
+  if (!csvContent) return [];
+
+  const rows = csvContent.split('\n').slice(1); // Skip header
+  const invoices = [];
+
+  rows.forEach(row => {
+    if (!row.trim()) return;
+
+    const parts = row.split(',');
+    if (parts.length < 8) return; // skip malformed rows
+
+    const [
+      timestamp,
+      departmentsStr,
+      itemsStr,
+      quantitiesStr,
+      pricesStr,
+      subtotal,
+      cash,
+      change
+    ] = parts;
+
+    const departments = departmentsStr.split(';');
+    const itemNames = itemsStr.split(';');
+    const quantities = quantitiesStr.split(';').map(Number);
+    const prices = pricesStr.split(';').map(Number);
+
+    const items = itemNames.map((name, i) => ({
+      name,
+      department: departments[i] || 'UNKNOWN',
+      quantity: quantities[i],
+      price: prices[i],
+      itemTotal: quantities[i] * prices[i]
+    }));
+
+    const invoiceDate = new Date(timestamp);
+
+    // Apply date filter
+    if (!dateFilter ||
+      (invoiceDate >= dateFilter.start && invoiceDate <= dateFilter.end)) {
+      invoices.push({
+        timestamp,
+        date: invoiceDate,
+        items,
+        subtotal: parseFloat(subtotal),
+        cash: parseFloat(cash),
+        change: parseFloat(change)
+      });
+    }
+  });
+
+  return invoices;
+}
+
+function generateZReport(){
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+
+  const todaysInvoices = getInvoicesFromCSV({
+    start: todayStart,
+    end: todayEnd
+  });
+
+  if (todaysInvoices.length === 0) {
+    showError('No transactions found for today.');
+    return;
+  }
+
+  // Totals
+  let totalSales = 0;
+  let totalCash = 0;
+  let totalChange = 0;
+
+  // Group sales by department
+  const departmentSales = {};
+
+ todaysInvoices.forEach(inv => {
+  totalSales += inv.subtotal;
+  totalCash += inv.cash;
+  totalChange += inv.change;
+
+  inv.items.forEach(item => {
+    if (!departmentSales[item.department]) {
+      departmentSales[item.department] = 0;
+    }
+    departmentSales[item.department] += item.itemTotal;
+  });
+});
+
+
+  // Format department-wise sales
+  let departmentSummary = '';
+  for (const [dept, total] of Object.entries(departmentSales)) {
+    departmentSummary += `${dept}: Rs ${total.toFixed(2)}\n`;
+  }
+
+  const now = new Date();
+  const zReport =
+`--------------------------
+  MALIK MEDICAL STORE - Z REPORT
+--------------------------
+Date: ${now.toLocaleDateString()}
+Time: ${now.toLocaleTimeString()}
+--------------------------
+TOTAL TRANSACTIONS: ${todaysInvoices.length}
+TOTAL SALES: Rs ${totalSales.toFixed(2)}
+TOTAL CASH: Rs ${totalCash.toFixed(2)}
+TOTAL CHANGE: Rs ${totalChange.toFixed(2)}
+--------------------------
+SALES BY DEPARTMENT:
+${departmentSummary}--------------------------
+END OF DAY REPORT
+--------------------------`;
+
+  receiptElement.textContent = zReport;
+  showSuccess('Z Report generated!');
+}
+
+  function generateCustomZReport() {
+  const startInput = document.getElementById('zReportStart');
+  const endInput = document.getElementById('zReportEnd');
+
+  if (!startInput.value || !endInput.value) {
+    showError('Please select both start and end dates');
+    return;
+  }
+
+  const dateFilter = {
+    start: new Date(startInput.value),
+    end: new Date(endInput.value)
+  };
+
+  const filteredInvoices = getInvoicesFromCSV(dateFilter);
+
+  if (filteredInvoices.length === 0) {
+    showError('No transactions found in selected range.');
+    return;
+  }
+
+  let totalSales = 0;
+  let totalCash = 0;
+  let totalChange = 0;
+  const departmentSales = {};
+
+  filteredInvoices.forEach(inv => {
+    totalSales += inv.subtotal;
+    totalCash += inv.cash;
+    totalChange += inv.change;
+
+    if (!departmentSales[inv.department]) {
+      departmentSales[inv.department] = 0;
+    }
+
+    departmentSales[inv.department] += inv.subtotal;
+  });
+
+  let departmentSummary = '';
+  for (const [dept, total] of Object.entries(departmentSales)) {
+    departmentSummary += `${dept}: Rs ${total.toFixed(2)}\n`;
+  }
+
+  const now = new Date();
+  const customReport =
+`--------------------------
+  MALIK MEDICAL STORE - CUSTOM Z REPORT
+--------------------------
+From: ${dateFilter.start.toLocaleDateString()}
+To: ${dateFilter.end.toLocaleDateString()}
+Generated: ${now.toLocaleString()}
+--------------------------
+TOTAL TRANSACTIONS: ${filteredInvoices.length}
+TOTAL SALES: Rs ${totalSales.toFixed(2)}
+TOTAL CASH: Rs ${totalCash.toFixed(2)}
+TOTAL CHANGE: Rs ${totalChange.toFixed(2)}
+--------------------------
+SALES BY DEPARTMENT:
+${departmentSummary}--------------------------
+END OF CUSTOM REPORT
+--------------------------`;
+
+  receiptElement.textContent = customReport;
+  showSuccess('Custom Z Report generated!');
+}
+
+
+  function exportCSV() {
+  const csvContent = localStorage.getItem('invoicesCSV') || '';
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `malik_medical_invoices_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const content = e.target.result;
+    // Basic validation
+    if (content.includes('Timestamp,Department,Items,Quantities,Prices,Subtotal,Cash,Change')) {
+      localStorage.setItem('invoicesCSV', content);
+      showSuccess('CSV imported successfully!');
+    } else {
+      showError('Invalid CSV format');
+    }
+  };
+  reader.readAsText(file);
+}
+function clearInvoiceStorage() {
+  const confirmClear = confirm("Are you sure you want to delete all invoice data? This cannot be undone.");
+  if (confirmClear) {
+    localStorage.removeItem('invoicesCSV');
+    showSuccess('All invoice data cleared!');
+  }
+}
+
+    // Start the application
+    init();
+  </script>
+</body>
+</html>
