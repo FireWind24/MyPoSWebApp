@@ -743,6 +743,19 @@ kbd {
 }
 .inv-dept-filter:focus { border-color: var(--b); }
 
+.inv-page-size {
+  background: var(--s2);
+  border: 1px solid var(--bd);
+  border-radius: 7px;
+  padding: 7px 10px;
+  color: var(--t);
+  font-family: var(--sans);
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+}
+.inv-page-size:focus { border-color: var(--b); }
+
 .inv-table-wrap { flex: 1; overflow-y: auto; padding: 12px 16px; }
 .inv-table-wrap::-webkit-scrollbar { width: 4px; }
 .inv-table-wrap::-webkit-scrollbar-thumb { background: var(--bd); }
@@ -787,6 +800,16 @@ kbd {
 }
 .td-price { font-family: var(--mono); color: var(--g); font-weight: 600; }
 .td-actions { display: flex; gap: 5px; justify-content: flex-end; }
+.inv-pagination {
+  padding: 8px 16px 14px;
+  border-top: 1px solid var(--bd);
+  background: var(--s1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.inv-page-meta { font-size: 11px; color: var(--t3); }
 
 /* ─── PRODUCT FORM (inline in inv view) ─── */
 .prod-form-wrap {
@@ -1034,6 +1057,35 @@ kbd {
     max-height: none; background: white; color: black; padding: 20px;
   }
 }
+
+/* ─── RESPONSIVE / SCALING ─── */
+@media (max-width: 1400px) {
+  #pos-view { grid-template-columns: 200px 1fr 320px; }
+}
+@media (max-width: 1200px) {
+  #pos-view { grid-template-columns: 180px 1fr; }
+  #cart-panel { grid-column: 1 / -1; border-top: 1px solid var(--bd); }
+  .data-layout { grid-template-columns: 1fr; }
+  .stat-cards { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 920px) {
+  html, body { overflow: auto; }
+  .app { min-height: 100vh; height: auto; }
+  .topbar { flex-wrap: wrap; height: auto; padding: 8px 12px; gap: 8px; }
+  .tb-nav { order: 3; width: 100%; margin-left: 0; overflow-x: auto; }
+  .tb-right { width: 100%; justify-content: space-between; margin-left: 0; }
+  #pos-view,
+  .rep-layout,
+  .pf-grid,
+  .data-layout,
+  .qty-price-row,
+  .action-btns { display: flex; flex-direction: column; }
+  .panel { border-right: none; border-bottom: 1px solid var(--bd); }
+  .panel:last-child { border-bottom: none; }
+  .inv-toolbar { flex-wrap: wrap; }
+  .inv-search { min-width: 100%; max-width: 100%; }
+}
+
 </style>
 </head>
 <body>
@@ -1256,9 +1308,15 @@ kbd {
     </div>
   </div>
   <div class="inv-toolbar">
-    <input class="inv-search" id="inv-search" placeholder="Search products…" oninput="renderInventory()" onkeydown="if(event.key==='Escape'){this.value='';renderInventory();}">
-    <select class="inv-dept-filter" id="inv-dept-filter" onchange="renderInventory()">
+    <input class="inv-search" id="inv-search" placeholder="Search products…" oninput="resetInventoryPage();renderInventory()" onkeydown="if(event.key==='Escape'){this.value='';resetInventoryPage();renderInventory();}">
+    <select class="inv-dept-filter" id="inv-dept-filter" onchange="resetInventoryPage();renderInventory()">
       <option value="">All Departments</option>
+    </select>
+    <select class="inv-page-size" id="inv-page-size" onchange="resetInventoryPage();renderInventory()">
+      <option value="25">25 / page</option>
+      <option value="50" selected>50 / page</option>
+      <option value="100">100 / page</option>
+      <option value="250">250 / page</option>
     </select>
     <span style="font-size:11px;color:var(--t3);margin-left:auto;" id="inv-count-label">0 products</span>
   </div>
@@ -1275,6 +1333,13 @@ kbd {
       </thead>
       <tbody id="inv-tbody"></tbody>
     </table>
+  </div>
+  <div class="inv-pagination">
+    <div class="inv-page-meta" id="inv-page-meta">Page 1 / 1</div>
+    <div style="display:flex;gap:6px;">
+      <button class="btn btn-ghost btn-xs" onclick="changeInventoryPage(-1)">← Prev</button>
+      <button class="btn btn-ghost btn-xs" onclick="changeInventoryPage(1)">Next →</button>
+    </div>
   </div>
 </div>
 
@@ -1394,6 +1459,7 @@ let editingProductId = null;
 let ctxDeptIndex = -1;
 let sessionSales = 0;
 let sessionTxns  = 0;
+let inventoryPage = 1;
 const DELIM = '|';
 
 // ══════════════════════════════════════════════════════
@@ -1961,6 +2027,7 @@ function printReceipt() {
   const txt = document.getElementById('receipt-text').textContent;
   if (!txt) { toast('No receipt to print', 'err'); return; }
   const w = window.open('', '_blank');
+  if (!w) { toast('Popup blocked by browser', 'err'); return; }
   w.document.write(`<html><head><title>Receipt</title><style>body{font-family:monospace;white-space:pre-wrap;padding:20px;font-size:13px;line-height:1.6;}</style></head><body>${esc(txt)}</body></html>`);
   w.document.close();
   setTimeout(() => { w.print(); w.close(); }, 200);
@@ -1977,6 +2044,7 @@ function printPDF() {
   const txt = document.getElementById('receipt-text').textContent;
   if (!txt) { toast('No receipt', 'err'); return; }
   const w = window.open('', '_blank');
+  if (!w) { toast('Popup blocked by browser', 'err'); return; }
   w.document.write(`<html><head><title>Invoice</title><style>body{font-family:monospace;white-space:pre-wrap;padding:16px;font-size:12px;line-height:1.6;}@page{size:80mm auto;margin:5mm;}</style></head><body>${esc(txt)}</body></html>`);
   w.document.close();
   setTimeout(() => { w.print(); }, 300);
@@ -1998,7 +2066,9 @@ function syncPFDeptSelect() {
 function renderInventory() {
   const q = document.getElementById('inv-search').value.toLowerCase();
   const dept = document.getElementById('inv-dept-filter').value;
+  const pageSize = Math.max(1, parseInt(document.getElementById('inv-page-size').value, 10) || 50);
   const tbody = document.getElementById('inv-tbody');
+  const meta = document.getElementById('inv-page-meta');
   tbody.innerHTML = '';
 
   let filtered = products.filter(p => {
@@ -2007,6 +2077,15 @@ function renderInventory() {
     return matchQ && matchD;
   });
 
+  filtered.sort((a, b) => a.name.localeCompare(b.name));
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  if (inventoryPage > pageCount) inventoryPage = pageCount;
+  if (inventoryPage < 1) inventoryPage = 1;
+  const startIdx = (inventoryPage - 1) * pageSize;
+  const visible = filtered.slice(startIdx, startIdx + pageSize);
+  meta.textContent = `Page ${inventoryPage} / ${pageCount}`;
+
   document.getElementById('inv-count-label').textContent = `${filtered.length} product${filtered.length !== 1 ? 's' : ''}`;
 
   if (filtered.length === 0) {
@@ -2014,10 +2093,10 @@ function renderInventory() {
     return;
   }
 
-  filtered.forEach((p, i) => {
+  visible.forEach((p, i) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td style="color:var(--t3);font-family:var(--mono);font-size:10px;">${i+1}</td>
+      <td style="color:var(--t3);font-family:var(--mono);font-size:10px;">${startIdx + i + 1}</td>
       <td class="td-name">${esc(p.name)}</td>
       <td><span class="td-dept">${esc(p.dept)}</span></td>
       <td class="td-price">Rs ${p.price.toFixed(2)}</td>
@@ -2028,6 +2107,13 @@ function renderInventory() {
     `;
     tbody.appendChild(tr);
   });
+}
+
+function resetInventoryPage() { inventoryPage = 1; }
+
+function changeInventoryPage(step) {
+  inventoryPage += step;
+  renderInventory();
 }
 
 function saveProduct() {
@@ -2125,16 +2211,22 @@ function getInvoices(filter = null) {
   rows.forEach(row => {
     if (!row.trim()) return;
     const p = row.split(DELIM);
-    if (p.length < 9) return;
+    if (p.length < 10) return;
     const [ts, depts, items, qtys, prices, sub, total, cash, change, discPct] = p;
     const date = new Date(ts);
+    if (Number.isNaN(date.getTime())) return;
     if (filter && (date < filter.start || date > filter.end)) return;
     const dArr = depts.split(';'), nArr = items.split(';'), qArr = qtys.split(';').map(Number), prArr = prices.split(';').map(Number);
+    const subtotal = parseFloat(sub), grandTotal = parseFloat(total), paid = parseFloat(cash), dueBack = parseFloat(change);
+    if ([subtotal, grandTotal, paid, dueBack].some(n => Number.isNaN(n))) return;
     out.push({
       date, ts,
       items: nArr.map((n,i) => ({ name:n, dept:dArr[i]||'?', qty:qArr[i], price:prArr[i], total:qArr[i]*prArr[i] })),
-      subtotal: parseFloat(sub), total: parseFloat(total), cash: parseFloat(cash),
-      change: parseFloat(change), discPct: parseFloat(discPct||0)
+      subtotal,
+      total: grandTotal,
+      cash: paid,
+      change: dueBack,
+      discPct: parseFloat(discPct||0)
     });
   });
   return out;
@@ -2166,6 +2258,7 @@ function customReport() {
   if (!s || !e) { toast('Select both dates', 'err'); return; }
   const start = new Date(s), end = new Date(e);
   if (start > end) { toast('Start must be before end', 'err'); return; }
+  end.setSeconds(59, 999);
   const invs = getInvoices({ start, end });
   buildReport(invs, 'CUSTOM RANGE', start.toLocaleString(), end.toLocaleString());
 }
@@ -2220,6 +2313,7 @@ ${deptLines || '  (no data)'}
 function printReport() {
   const txt = document.getElementById('rep-output').textContent;
   const w = window.open('', '_blank');
+  if (!w) { toast('Popup blocked by browser', 'err'); return; }
   w.document.write(`<html><head><title>Report</title><style>body{font-family:monospace;white-space:pre-wrap;padding:20px;font-size:12px;line-height:1.6;}</style></head><body>${esc(txt)}</body></html>`);
   w.document.close(); setTimeout(() => { w.print(); w.close(); }, 200);
 }
@@ -2306,11 +2400,19 @@ function importProducts(e) {
     try {
       const data = JSON.parse(ev.target.result);
       if (Array.isArray(data)) {
-        products = data;
+        products = data
+          .filter(p => p && typeof p.name === 'string' && typeof p.dept === 'string' && Number.isFinite(Number(p.price)))
+          .map((p, idx) => ({
+            id: p.id || `p_import_${Date.now()}_${idx}`,
+            name: p.name.trim(),
+            dept: p.dept.trim().toUpperCase(),
+            price: Number(p.price)
+          }))
+          .filter(p => p.name && p.dept && p.price >= 0);
         saveProducts();
         renderInventory();
         renderDepts();
-        toast(`Imported ${data.length} products`, 'ok');
+        toast(`Imported ${products.length} products`, 'ok');
         refreshDataView();
       } else toast('Invalid JSON format', 'err');
     } catch { toast('Parse error', 'err'); }
