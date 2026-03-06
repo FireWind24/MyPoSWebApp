@@ -748,68 +748,108 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
   <button onclick="ctxDelete()">✕ Delete</button>
 </div>
 <div class="toast-wrap" id="toasts"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <script>
 // ═══════════════════════════════════════════════════════════════
-// DATABASE  (IndexedDB)
+// DATABASE  (Supabase Cloud — CDN loaded dynamically so a
+//            failure never kills the rest of the script)
 // ═══════════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://ixprytnwmgcztxhktlhm.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4cHJ5dG53bWdjenR4aGt0bGhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODY2MTEsImV4cCI6MjA4ODM2MjYxMX0.0rlrP4CMeK5Immpf8NusnrD_FncYVapORqZykXARDeg';
 
-// ═══════════════════════════════════════════════════════════════
-// DATABASE  (Cloud Firestore)
-// ═══════════════════════════════════════════════════════════════
+// dbClient is set after CDN loads. All db functions check it before using it.
+let dbClient = null;
+let dbReady = false;
 
-// Paste your specific config block here
-// ═══════════════════════════════════════════════════════════════
-// DATABASE  (Supabase Cloud)
-// ═══════════════════════════════════════════════════════════════
-const supabaseUrl = 'https://ixprytnwmgcztxhktlhm.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4cHJ5dG53bWdjenR4aGt0bGhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODY2MTEsImV4cCI6MjA4ODM2MjYxMX0.0rlrP4CMeK5Immpf8NusnrD_FncYVapORqZykXARDeg';
+function openDB() {
+  return new Promise((resolve) => {
+    // If already loaded, done
+    if (dbClient) { dbReady = true; resolve(); return; }
 
-// Renamed to dbClient — 'supabase' is already taken by the CDN global, collision kills the script
-const dbClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+    // Dynamically load the Supabase CDN so a failure is contained
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+    script.onload = () => {
+      try {
+        // window.supabase is the CDN global — use a different name for our client
+        dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        dbReady = true;
+        console.log('Supabase connected');
+      } catch(e) {
+        console.error('Supabase init failed:', e.message);
+        toast('Cloud unavailable — running locally', 'err');
+      }
+      resolve();
+    };
+    script.onerror = () => {
+      console.error('Supabase CDN failed to load');
+      toast('Cloud unavailable — running locally', 'err');
+      resolve(); // resolve anyway so init() continues
+    };
+    document.head.appendChild(script);
+  });
+}
 
-function openDB() { return Promise.resolve(dbClient); }
 function getPk(store) { return store === 'config' ? 'key' : 'id'; }
 
 async function dbGet(store, key) {
-  const { data, error } = await dbClient.from(store).select('*').eq(getPk(store), String(key)).single();
-  if (error && error.code !== 'PGRST116') console.error('dbGet:', error.message);
-  return data || undefined;
+  if (!dbClient) return undefined;
+  try {
+    const { data, error } = await dbClient.from(store).select('*').eq(getPk(store), String(key)).single();
+    if (error && error.code !== 'PGRST116') console.error('dbGet:', error.message);
+    return data || undefined;
+  } catch(e) { console.error('dbGet exception:', e.message); return undefined; }
 }
 
 async function dbPut(store, val) {
-  const { data, error } = await dbClient.from(store).upsert(val).select().single();
-  if (error) { console.error('dbPut:', error.message); toast('Cloud save failed!', 'err'); }
-  return data || val;
+  if (!dbClient) return val;
+  try {
+    const { data, error } = await dbClient.from(store).upsert(val).select().single();
+    if (error) { console.error('dbPut:', error.message); toast('Cloud save failed!', 'err'); }
+    return data || val;
+  } catch(e) { console.error('dbPut exception:', e.message); return val; }
 }
 
 async function dbAdd(store, val) {
-  const { data, error } = await dbClient.from(store).insert(val).select().single();
-  if (error) { console.error('dbAdd:', error.message); toast('Cloud save failed!', 'err'); }
-  return data || val;
+  if (!dbClient) return val;
+  try {
+    const { data, error } = await dbClient.from(store).insert(val).select().single();
+    if (error) { console.error('dbAdd:', error.message); toast('Cloud save failed!', 'err'); }
+    return data || val;
+  } catch(e) { console.error('dbAdd exception:', e.message); return val; }
 }
 
 async function dbDelete(store, key) {
-  const { error } = await dbClient.from(store).delete().eq(getPk(store), String(key));
-  if (error) { console.error('dbDelete:', error.message); toast('Cloud delete failed!', 'err'); }
+  if (!dbClient) return;
+  try {
+    const { error } = await dbClient.from(store).delete().eq(getPk(store), String(key));
+    if (error) { console.error('dbDelete:', error.message); toast('Cloud delete failed!', 'err'); }
+  } catch(e) { console.error('dbDelete exception:', e.message); }
 }
 
 async function dbGetAll(store) {
-  const { data, error } = await dbClient.from(store).select('*');
-  if (error) { console.error('dbGetAll:', error.message); return []; }
-  return data || [];
+  if (!dbClient) return [];
+  try {
+    const { data, error } = await dbClient.from(store).select('*');
+    if (error) { console.error('dbGetAll:', error.message); return []; }
+    return data || [];
+  } catch(e) { console.error('dbGetAll exception:', e.message); return []; }
 }
 
 async function dbClear(store) {
-  const { error } = await dbClient.from(store).delete().not(getPk(store), 'is', null);
-  if (error) console.error('dbClear:', error.message);
+  if (!dbClient) return;
+  try {
+    const { error } = await dbClient.from(store).delete().not(getPk(store), 'is', null);
+    if (error) console.error('dbClear:', error.message);
+  } catch(e) { console.error('dbClear exception:', e.message); }
 }
 
 async function dbCount(store) {
-  const { count, error } = await dbClient.from(store).select('*', { count: 'exact', head: true });
-  if (error) console.error('dbCount:', error.message);
-  return count || 0;
+  if (!dbClient) return 0;
+  try {
+    const { count, error } = await dbClient.from(store).select('*', { count: 'exact', head: true });
+    if (error) console.error('dbCount:', error.message);
+    return count || 0;
+  } catch(e) { console.error('dbCount exception:', e.message); return 0; }
 }
 // ═══════════════════════════════════════════════════════════════
 // STATE
@@ -849,32 +889,65 @@ function switchTab(tab) {
 // ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
+const DEFAULT_DEPTS = [
+  'MEDICAL STORE','GEN STORE','HAFIZ ASLAM','STILLMENS','D SOFT','BYE BYE',
+  'SENIOR','MILK','AZITH','NEUROBIOTIC','HUMULIN','VIGA','DOSE','COCA COLA',
+  'TOY','DOCTOR','ROSIP','HAFIZ','FACEMASK','MACH','NESTLE WATER',
+  'ALWAYS PAD','SUGAR TEST','ALOPIA OIL','EMPRO','SALEBASE','ON THE GO'
+];
+
 async function init() {
-  await openDB();
-
-  // Load departments
-  const cfgDepts = await dbGet('config','departments');
-  departments = cfgDepts ? cfgDepts.value : [
-    'MEDICAL STORE','GEN STORE','HAFIZ ASLAM','STILLMENS','D SOFT','BYE BYE',
-    'SENIOR','MILK','AZITH','NEUROBIOTIC','HUMULIN','VIGA','DOSE','COCA COLA',
-    'TOY','DOCTOR','ROSIP','HAFIZ','FACEMASK','MACH','NESTLE WATER',
-    'ALWAYS PAD','SUGAR TEST','ALOPIA OIL','EMPRO','SALEBASE','ON THE GO'
-  ];
-  if (!cfgDepts) await saveDepts();
-
-  // Migrate legacy localStorage data if present
-  await migrateLegacy();
-
-  products = await dbGetAll('products');
-  renderDepts();
-  syncInvSelects();
-  buildQC();
-  await loadTodayStats();
-  document.getElementById('item-search').focus();
-
+  // ── Attach all event listeners FIRST — before any async work ──
+  // This way buttons always work even if Supabase is slow or fails
   document.addEventListener('click', e => { if (!e.target.closest('#ctx-menu')) closeCtx(); });
   document.getElementById('ac-drop').addEventListener('mousedown', e => e.preventDefault());
   document.getElementById('item-search').addEventListener('blur', () => setTimeout(closeAC, 150));
+
+  // ── Render UI with defaults immediately so app is usable right away ──
+  departments = DEFAULT_DEPTS;
+  renderDepts();
+  syncInvSelects();
+  buildQC();
+
+  // ── Then load from Supabase in background ──
+  try {
+    await openDB();
+
+    // Load departments
+    try {
+      const cfgDepts = await dbGet('config', 'departments');
+      if (cfgDepts && Array.isArray(cfgDepts.value) && cfgDepts.value.length > 0) {
+        departments = cfgDepts.value;
+      } else {
+        // Nothing in DB yet — save the defaults
+        await saveDepts();
+      }
+    } catch(e) {
+      console.warn('Could not load departments from cloud:', e.message);
+    }
+
+    // Load products
+    try {
+      const prods = await dbGetAll('products');
+      products = prods || [];
+    } catch(e) {
+      console.warn('Could not load products from cloud:', e.message);
+    }
+
+    // Migrate any legacy localStorage data
+    try { await migrateLegacy(); } catch(e) { console.warn('Migration skipped:', e.message); }
+
+    // Re-render with cloud data
+    renderDepts();
+    syncInvSelects();
+
+    await loadTodayStats();
+  } catch(e) {
+    console.error('Cloud init failed — running in offline mode:', e.message);
+    toast('Running offline — cloud unavailable', 'err');
+  }
+
+  document.getElementById('item-search').focus();
 }
 
 async function migrateLegacy() {
@@ -921,7 +994,11 @@ async function migrateLegacy() {
 // ═══════════════════════════════════════════════════════════════
 // DEPARTMENTS
 // ═══════════════════════════════════════════════════════════════
-async function saveDepts() { await dbPut('config', {key:'departments', value:departments}); }
+async function saveDepts() {
+  try {
+    await dbPut('config', {key:'departments', value:departments});
+  } catch(e) { console.warn('saveDepts failed:', e.message); }
+}
 
 function renderDepts(filter='') {
   const list = document.getElementById('dept-list');
@@ -954,9 +1031,10 @@ async function addDept() {
   const v = document.getElementById('new-dept-inp').value.trim().toUpperCase();
   if (!v) { toast('Enter a name','err'); return; }
   if (departments.includes(v)) { toast('Already exists','err'); return; }
-  departments.push(v); await saveDepts();
+  departments.push(v);
   renderDepts(); syncInvSelects(); closeDeptForm();
   toast(`Added: ${v}`,'ok');
+  saveDepts(); // fire-and-forget, already has its own try/catch
 }
 function showCtx(e) { const m=document.getElementById('ctx-menu'); m.style.display='block'; m.style.left=`${e.clientX}px`; m.style.top=`${e.clientY}px`; e.stopPropagation(); }
 function closeCtx() { document.getElementById('ctx-menu').style.display='none'; }
@@ -1614,6 +1692,7 @@ function dlReport() { dlBlob(document.getElementById('rep-output').textContent,'
 // TODAY STATS
 // ═══════════════════════════════════════════════════════════════
 async function loadTodayStats() {
+  try {
   const start=new Date(); start.setHours(0,0,0,0);
   const end=new Date(); end.setHours(23,59,59,999);
   const all=await dbGetAll('invoices');
@@ -1624,6 +1703,7 @@ async function loadTodayStats() {
   const total=today.reduce((s,i)=>s+i.total,0);
   document.getElementById('tb-sales').textContent=`Rs ${total.toFixed(2)}`;
   document.getElementById('tb-txns').textContent=today.length;
+  } catch(e) { console.warn('loadTodayStats failed:', e.message); }
 }
 
 // ═══════════════════════════════════════════════════════════════
