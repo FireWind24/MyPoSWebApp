@@ -319,7 +319,7 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
 .receipt-toggle-btn:hover{color:var(--t)}
 .receipt-body{display:none;border-top:1px solid var(--bd)}
 .receipt-body.open{display:block}
-.receipt-pre{font-family:var(--mono);font-size:10px;color:var(--g);background:#020807;padding:12px 16px;white-space:pre-wrap;line-height:1.7;max-height:260px;overflow-y:auto}
+.receipt-pre{font-family:var(--mono);font-size:10px;color:var(--g);background:#020807;padding:12px 16px;white-space:pre-wrap;line-height:1.7;max-height:180px;overflow-y:auto}
 .receipt-acts{padding:8px 16px;background:var(--s2);border-top:1px solid var(--bd);display:none;gap:6px}
 .receipt-acts.show{display:flex}
 
@@ -731,7 +731,12 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
       </div>
       <div class="data-block">
         <div class="db-head"><span class="db-head-title">Departments</span><span class="db-head-badge" style="color:var(--pu)" id="db-dept-count">0</span></div>
-        <div class="db-body" id="db-dept-body"></div>
+        <div class="db-body">
+          <p class="db-desc">Right-click any department in Register to rename it individually.</p>
+          <button class="btn btn-ghost btn-sm" onclick="switchTab('pos');setTimeout(openDeptForm,50)">＋ Add Department</button>
+          <button class="btn btn-ghost-r btn-sm" onclick="clearAllDepts()">🗑 Delete All Departments</button>
+          <div id="db-dept-body" style="margin-top:8px"></div>
+        </div>
       </div>
       <div class="data-block">
         <div class="db-head"><span class="db-head-title">Session Stats</span></div>
@@ -750,106 +755,83 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
 <div class="toast-wrap" id="toasts"></div>
 <script>
 // ═══════════════════════════════════════════════════════════════
-// DATABASE  (Supabase Cloud — CDN loaded dynamically so a
-//            failure never kills the rest of the script)
+// DATABASE  (Supabase — CDN loaded dynamically so any network
+//            failure never kills the rest of the app)
 // ═══════════════════════════════════════════════════════════════
 const SUPABASE_URL = 'https://ixprytnwmgcztxhktlhm.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4cHJ5dG53bWdjenR4aGt0bGhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODY2MTEsImV4cCI6MjA4ODM2MjYxMX0.0rlrP4CMeK5Immpf8NusnrD_FncYVapORqZykXARDeg';
 
-// dbClient is set after CDN loads. All db functions check it before using it.
+// Named dbClient — different from window.supabase (CDN global) to avoid collision
 let dbClient = null;
-let dbReady = false;
 
 function openDB() {
-  return new Promise((resolve) => {
-    // If already loaded, done
-    if (dbClient) { dbReady = true; resolve(); return; }
-
-    // Dynamically load the Supabase CDN so a failure is contained
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-    script.onload = () => {
-      try {
-        // window.supabase is the CDN global — use a different name for our client
-        dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        dbReady = true;
-        console.log('Supabase connected');
-      } catch(e) {
-        console.error('Supabase init failed:', e.message);
-        toast('Cloud unavailable — running locally', 'err');
-      }
+  return new Promise(resolve => {
+    if (dbClient) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+    s.onload = () => {
+      try { dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); }
+      catch(e) { console.error('Supabase init failed:', e.message); toast('Cloud unavailable','err'); }
       resolve();
     };
-    script.onerror = () => {
-      console.error('Supabase CDN failed to load');
-      toast('Cloud unavailable — running locally', 'err');
-      resolve(); // resolve anyway so init() continues
-    };
-    document.head.appendChild(script);
+    s.onerror = () => { console.error('Supabase CDN failed'); toast('Cloud unavailable','err'); resolve(); };
+    document.head.appendChild(s);
   });
 }
-
 function getPk(store) { return store === 'config' ? 'key' : 'id'; }
-
 async function dbGet(store, key) {
   if (!dbClient) return undefined;
   try {
     const { data, error } = await dbClient.from(store).select('*').eq(getPk(store), String(key)).single();
     if (error && error.code !== 'PGRST116') console.error('dbGet:', error.message);
     return data || undefined;
-  } catch(e) { console.error('dbGet exception:', e.message); return undefined; }
+  } catch(e) { return undefined; }
 }
-
 async function dbPut(store, val) {
   if (!dbClient) return val;
   try {
     const { data, error } = await dbClient.from(store).upsert(val).select().single();
-    if (error) { console.error('dbPut:', error.message); toast('Cloud save failed!', 'err'); }
+    if (error) { console.error('dbPut:', error.message); toast('Cloud save failed!','err'); }
     return data || val;
-  } catch(e) { console.error('dbPut exception:', e.message); return val; }
+  } catch(e) { return val; }
 }
-
 async function dbAdd(store, val) {
   if (!dbClient) return val;
   try {
     const { data, error } = await dbClient.from(store).insert(val).select().single();
-    if (error) { console.error('dbAdd:', error.message); toast('Cloud save failed!', 'err'); }
+    if (error) { console.error('dbAdd:', error.message); toast('Cloud save failed!','err'); }
     return data || val;
-  } catch(e) { console.error('dbAdd exception:', e.message); return val; }
+  } catch(e) { return val; }
 }
-
 async function dbDelete(store, key) {
   if (!dbClient) return;
   try {
     const { error } = await dbClient.from(store).delete().eq(getPk(store), String(key));
-    if (error) { console.error('dbDelete:', error.message); toast('Cloud delete failed!', 'err'); }
-  } catch(e) { console.error('dbDelete exception:', e.message); }
+    if (error) { console.error('dbDelete:', error.message); toast('Cloud delete failed!','err'); }
+  } catch(e) {}
 }
-
 async function dbGetAll(store) {
   if (!dbClient) return [];
   try {
     const { data, error } = await dbClient.from(store).select('*');
     if (error) { console.error('dbGetAll:', error.message); return []; }
     return data || [];
-  } catch(e) { console.error('dbGetAll exception:', e.message); return []; }
+  } catch(e) { return []; }
 }
-
 async function dbClear(store) {
   if (!dbClient) return;
   try {
     const { error } = await dbClient.from(store).delete().not(getPk(store), 'is', null);
     if (error) console.error('dbClear:', error.message);
-  } catch(e) { console.error('dbClear exception:', e.message); }
+  } catch(e) {}
 }
-
 async function dbCount(store) {
   if (!dbClient) return 0;
   try {
     const { count, error } = await dbClient.from(store).select('*', { count: 'exact', head: true });
     if (error) console.error('dbCount:', error.message);
     return count || 0;
-  } catch(e) { console.error('dbCount exception:', e.message); return 0; }
+  } catch(e) { return 0; }
 }
 // ═══════════════════════════════════════════════════════════════
 // STATE
@@ -890,59 +872,40 @@ function switchTab(tab) {
 // INIT
 // ═══════════════════════════════════════════════════════════════
 const DEFAULT_DEPTS = [
+  'MEDICAL STORE','GEN STORE','HAFIZ ASLAM','STILLMENS','D SOFT','BYE BYE',
+  'SENIOR','MILK','AZITH','NEUROBIOTIC','HUMULIN','VIGA','DOSE','COCA COLA',
+  'TOY','DOCTOR','ROSIP','HAFIZ','FACEMASK','MACH','NESTLE WATER',
+  'ALWAYS PAD','SUGAR TEST','ALOPIA OIL','EMPRO','SALEBASE','ON THE GO'
 ];
 
 async function init() {
-  // ── Attach all event listeners FIRST — before any async work ──
-  // This way buttons always work even if Supabase is slow or fails
+  // Wire up listeners FIRST — buttons always work even if Supabase is slow/down
   document.addEventListener('click', e => { if (!e.target.closest('#ctx-menu')) closeCtx(); });
   document.getElementById('ac-drop').addEventListener('mousedown', e => e.preventDefault());
   document.getElementById('item-search').addEventListener('blur', () => setTimeout(closeAC, 150));
 
-  // ── Render UI with defaults immediately so app is usable right away ──
-  departments = DEFAULT_DEPTS;
-  renderDepts();
-  syncInvSelects();
-  buildQC();
+  // Show defaults immediately so app is usable right away
+  departments = [...DEFAULT_DEPTS];
+  renderDepts(); syncInvSelects(); buildQC();
 
-  // ── Then load from Supabase in background ──
   try {
     await openDB();
-
-    // Load departments
     try {
       const cfgDepts = await dbGet('config', 'departments');
       if (cfgDepts && Array.isArray(cfgDepts.value) && cfgDepts.value.length > 0) {
         departments = cfgDepts.value;
       } else {
-        // Nothing in DB yet — save the defaults
-        await saveDepts();
+        saveDepts();
       }
-    } catch(e) {
-      console.warn('Could not load departments from cloud:', e.message);
-    }
-
-    // Load products
-    try {
-      const prods = await dbGetAll('products');
-      products = prods || [];
-    } catch(e) {
-      console.warn('Could not load products from cloud:', e.message);
-    }
-
-    // Migrate any legacy localStorage data
-    try { await migrateLegacy(); } catch(e) { console.warn('Migration skipped:', e.message); }
-
-    // Re-render with cloud data
-    renderDepts();
-    syncInvSelects();
-
+    } catch(e) { console.warn('Could not load depts:', e.message); }
+    try { products = (await dbGetAll('products')) || []; } catch(e) {}
+    try { await migrateLegacy(); } catch(e) {}
+    renderDepts(); syncInvSelects();
     await loadTodayStats();
   } catch(e) {
-    console.error('Cloud init failed — running in offline mode:', e.message);
+    console.error('Cloud init failed:', e.message);
     toast('Running offline — cloud unavailable', 'err');
   }
-
   document.getElementById('item-search').focus();
 }
 
@@ -991,9 +954,8 @@ async function migrateLegacy() {
 // DEPARTMENTS
 // ═══════════════════════════════════════════════════════════════
 async function saveDepts() {
-  try {
-    await dbPut('config', {key:'departments', value:departments});
-  } catch(e) { console.warn('saveDepts failed:', e.message); }
+  try { await dbPut('config', {key:'departments', value:departments}); }
+  catch(e) { console.warn('saveDepts:', e.message); }
 }
 
 function renderDepts(filter='') {
@@ -1030,7 +992,7 @@ async function addDept() {
   departments.push(v);
   renderDepts(); syncInvSelects(); closeDeptForm();
   toast(`Added: ${v}`,'ok');
-  saveDepts(); // fire-and-forget, already has its own try/catch
+  saveDepts();
 }
 function showCtx(e) { const m=document.getElementById('ctx-menu'); m.style.display='block'; m.style.left=`${e.clientX}px`; m.style.top=`${e.clientY}px`; e.stopPropagation(); }
 function closeCtx() { document.getElementById('ctx-menu').style.display='none'; }
@@ -1299,17 +1261,12 @@ async function completeCheckout() {
   buildReceipt(final, change, discPct);
   document.getElementById('receipt-bar').classList.add('show');
   document.getElementById('receipt-acts').classList.add('show');
-  // Auto-open receipt and scroll cart panel to show it
-  const recBody = document.getElementById('receipt-body');
-  const recBtn  = document.getElementById('receipt-toggle-btn');
-  recBody.classList.add('open');
-  recBtn.textContent = '▲ Hide';
-  // Scroll receipt into view
-  setTimeout(() => document.getElementById('receipt-bar').scrollIntoView({behavior:'smooth', block:'end'}), 80);
-  // Reset register scroll to top so VFD header is visible
+  document.getElementById('receipt-body').classList.add('open');
+  document.getElementById('receipt-toggle-btn').textContent = '▲ Hide';
   document.getElementById('reg-scroll').scrollTop = 0;
-  setStatus(`✓ Sale complete! Change: Rs ${change.toFixed(2)}`,'ok');
-  toast(`Change: Rs ${change.toFixed(2)}`,'ok');
+  setTimeout(() => document.getElementById('receipt-bar').scrollIntoView({behavior:'smooth',block:'nearest'}), 80);
+  setStatus('✓ Sale complete! Change: Rs '+change.toFixed(2),'ok');
+  toast('Change: Rs '+change.toFixed(2),'ok');
 }
 
 function buildQC() {
@@ -1418,6 +1375,13 @@ function pfNameHint() {
   }
 }
 
+function pfNameHint() {
+  const q = document.getElementById('pf-name').value.trim().toLowerCase();
+  if (!q) return;
+  const match = products.find(p => p.name.toLowerCase().startsWith(q));
+  if (match) { const s=document.getElementById('pf-dept'); if(s.value!==match.dept) s.value=match.dept; }
+}
+
 function syncInvSelects() {
   const pfd=document.getElementById('pf-dept');
   const cur=pfd.value;
@@ -1516,24 +1480,17 @@ async function renderInvoiceList() {
   const q  = document.getElementById('invl-srch').value.toLowerCase();
   const df = document.getElementById('invl-date').value;
   let invs = await dbGetAll('invoices');
-  invs.sort((a,b)=>{
-    const da = typeof a.date==='number' ? a.date : new Date(a.date).getTime();
-    const db_ = typeof b.date==='number' ? b.date : new Date(b.date).getTime();
-    return db_-da;
-  });
+  invs.sort((a,b)=>b.date-a.date);
 
   if (df) {
     const day = new Date(df); day.setHours(0,0,0,0);
     const dayEnd = new Date(df); dayEnd.setHours(23,59,59,999);
-    invs = invs.filter(inv => {
-      const d = typeof inv.date === 'number' ? inv.date : new Date(inv.date).getTime();
-      return d >= day.getTime() && d <= dayEnd.getTime();
-    });
+    invs = invs.filter(inv => inv.date>=day.getTime() && inv.date<=dayEnd.getTime());
   }
   if (q) {
     invs = invs.filter(inv =>
       inv.total.toFixed(2).includes(q) ||
-      (Array.isArray(inv.items) && inv.items.some(i=>i&&i.name&&i.name.toLowerCase().includes(q))) ||
+      inv.items.some(i=>i.name.toLowerCase().includes(q)) ||
       inv.dateStr.includes(q)
     );
   }
@@ -1546,7 +1503,7 @@ async function renderInvoiceList() {
     return;
   }
   invs.forEach((inv,i) => {
-    const dt=new Date(typeof inv.date==='number' ? inv.date : inv.dateStr || inv.date);
+    const dt=new Date(inv.date);
     const row=document.createElement('div');
     row.className='invl-row'+(inv.id===selectedInvoiceId?' sel':'');
     row.innerHTML=`
@@ -1556,7 +1513,7 @@ async function renderInvoiceList() {
       </div>
       <div class="invl-row-date">${dt.toLocaleDateString('en-PK',{weekday:'short',year:'numeric',month:'short',day:'numeric'})} · ${dt.toLocaleTimeString()}</div>
       <div class="invl-row-items">${inv.items.length} item${inv.items.length!==1?'s':''}: ${inv.items.map(i=>i.name).slice(0,3).join(', ')}${inv.items.length>3?'…':''}</div>`;
-    row.onclick=(e)=>showInvoiceDetail(inv, e.currentTarget);
+    row.onclick=(e)=>showInvoiceDetail(inv,e.currentTarget);
     list.appendChild(row);
   });
 }
@@ -1565,7 +1522,7 @@ function showInvoiceDetail(inv, rowEl) {
   selectedInvoiceId = inv.id;
   document.querySelectorAll('.invl-row').forEach(r=>r.classList.remove('sel'));
   if (rowEl) rowEl.classList.add('sel');
-  const dt=new Date(typeof inv.date==='number' ? inv.date : inv.dateStr || inv.date);
+  const dt=new Date(inv.date);
   const detail=document.getElementById('invl-detail');
   const itemsHtml=inv.items.map(it=>`
     <div class="inv-item-row">
@@ -1614,7 +1571,7 @@ async function deleteInvoice(id) {
 async function printInvDetail(id) {
   const invs = await dbGetAll('invoices');
   const inv = invs.find(i=>i.id===id); if (!inv) return;
-  const dt=new Date(typeof inv.date==='number' ? inv.date : inv.dateStr || inv.date);
+  const dt=new Date(inv.date);
   let lines='';
   inv.items.forEach(item=>{
     lines+=`${(item.dept||'').padEnd(14)} ${item.name}\n  ${item.qty} x Rs${item.price.toFixed(2).padStart(8)} = Rs${item.total.toFixed(2)}\n`;
@@ -1637,10 +1594,7 @@ async function quickReport(range) {
   else { start=new Date(0); end=new Date(); }
   const labels={today:'TODAY',week:'THIS WEEK',month:'THIS MONTH',all:'ALL TIME'};
   const all=await dbGetAll('invoices');
-  const invs = range==='all' ? all : all.filter(i=>{
-    const d = typeof i.date==='number' ? i.date : new Date(i.date).getTime();
-    return d>=start.getTime()&&d<=end.getTime();
-  });
+  const invs = range==='all' ? all : all.filter(i=>i.date>=start.getTime()&&i.date<=end.getTime());
   buildReport(invs,labels[range],start.toLocaleDateString(),end.toLocaleDateString());
 }
 
@@ -1650,10 +1604,7 @@ async function customReport() {
   const start=new Date(s), end=new Date(e);
   if (start>end) { toast('Start must be before end','err'); return; }
   const all=await dbGetAll('invoices');
-  const invs=all.filter(i=>{
-    const d = typeof i.date==='number' ? i.date : new Date(i.date).getTime();
-    return d>=start.getTime()&&d<=end.getTime();
-  });
+  const invs=all.filter(i=>i.date>=start.getTime()&&i.date<=end.getTime());
   buildReport(invs,'CUSTOM RANGE',start.toLocaleString(),end.toLocaleString());
 }
 
@@ -1689,36 +1640,62 @@ function dlReport() { dlBlob(document.getElementById('rep-output').textContent,'
 // ═══════════════════════════════════════════════════════════════
 async function loadTodayStats() {
   try {
-  const start=new Date(); start.setHours(0,0,0,0);
-  const end=new Date(); end.setHours(23,59,59,999);
-  const all=await dbGetAll('invoices');
-  const today=all.filter(i=>{
-    const d = typeof i.date==='number' ? i.date : new Date(i.date).getTime();
-    return d>=start.getTime()&&d<=end.getTime();
-  });
-  const total=today.reduce((s,i)=>s+i.total,0);
-  document.getElementById('tb-sales').textContent=`Rs ${total.toFixed(2)}`;
-  document.getElementById('tb-txns').textContent=today.length;
-  } catch(e) { console.warn('loadTodayStats failed:', e.message); }
+    const start=new Date(); start.setHours(0,0,0,0);
+    const end=new Date(); end.setHours(23,59,59,999);
+    const all=await dbGetAll('invoices');
+    const today=all.filter(i=>{
+      const d=typeof i.date==='number'?i.date:new Date(i.date||i.dateStr).getTime();
+      return d>=start.getTime()&&d<=end.getTime();
+    });
+    const total=today.reduce((s,i)=>s+(parseFloat(i.total)||0),0);
+    document.getElementById('tb-sales').textContent='Rs '+total.toFixed(2);
+    document.getElementById('tb-txns').textContent=today.length;
+  } catch(e) { console.warn('loadTodayStats:', e.message); }
 }
 
 // ═══════════════════════════════════════════════════════════════
 // DATA VIEW
 // ═══════════════════════════════════════════════════════════════
 async function refreshDataView() {
-  const invCount=await dbCount('invoices');
-  document.getElementById('db-inv-count').textContent=`${invCount} record${invCount!==1?'s':''}`;
-  document.getElementById('db-prod-count').textContent=`${products.length} product${products.length!==1?'s':''}`;
-  document.getElementById('db-dept-count').textContent=departments.length;
-  document.getElementById('db-dept-body').innerHTML=`
-    <p class="db-desc" style="margin-bottom:8px">Right-click departments in Register to rename or delete.</p>
-    <div style="max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
-      ${departments.map(d=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--s2);border-radius:6px;border:1px solid var(--bd)"><span style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${esc(d)}</span><span style="font-family:var(--mono);font-size:9px;color:var(--t3);flex-shrink:0;margin-left:8px">${products.filter(p=>p.dept===d).length} products</span></div>`).join('')}
-    </div>`;
-  document.getElementById('db-session-body').innerHTML=`
-    <div style="display:flex;flex-direction:column;gap:7px">
-      ${[['Session Sales',`Rs ${sessionSales.toFixed(2)}`,`color:var(--g)`],['Transactions',sessionTxns,`color:var(--b)`],['Products in DB',products.length,`color:var(--t2)`],['Departments',departments.length,`color:var(--t2)`]].map(([l,v,c])=>`<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:var(--t3);font-weight:600">${l}</span><span style="font-family:var(--mono);font-size:12px;font-weight:700;${c}">${v}</span></div>`).join('')}
-    </div>`;
+  try {
+    const invCount = await dbCount('invoices');
+    document.getElementById('db-inv-count').textContent = invCount + ' record' + (invCount!==1?'s':'');
+  } catch(e) { document.getElementById('db-inv-count').textContent = '—'; }
+  document.getElementById('db-prod-count').textContent = products.length + ' product' + (products.length!==1?'s':'');
+  document.getElementById('db-dept-count').textContent = departments.length;
+  const sd = [...departments].sort((a,b)=>a.localeCompare(b));
+  const rows = sd.map(function(d) {
+    return '<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--s2);border-radius:6px;border:1px solid var(--bd)">'
+      + '<span style="font-size:11px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(d) + '</span>'
+      + '<span style="font-family:var(--mono);font-size:9px;color:var(--t3);flex-shrink:0">' + products.filter(function(p){return p.dept===d;}).length + '</span>'
+      + '<button data-dept="' + esc(d) + '" onclick="quickDeleteDept(this.dataset.dept)" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:15px;line-height:1;padding:0 0 0 6px">×</button>'
+      + '</div>';
+  });
+  document.getElementById('db-dept-body').innerHTML = '<div style="max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:3px">' + rows.join('') + '</div>';
+  const stats = [['Session Sales','Rs '+sessionSales.toFixed(2),'color:var(--g)'],['Transactions',sessionTxns,'color:var(--b)'],['Products in DB',products.length,'color:var(--t2)'],['Departments',departments.length,'color:var(--t2)']];
+  document.getElementById('db-session-body').innerHTML = '<div style="display:flex;flex-direction:column;gap:7px">' + stats.map(function(x){
+    return '<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:var(--t3);font-weight:600">'+x[0]+'</span><span style="font-family:var(--mono);font-size:12px;font-weight:700;'+x[2]+'">'+x[1]+'</span></div>';
+  }).join('') + '</div>';
+}
+
+
+async function quickDeleteDept(name) {
+  if (!confirm('Delete department "' + name + '"?')) return;
+  departments = departments.filter(d => d !== name);
+  if (currentDept === name) currentDept = '';
+  saveDepts();
+  renderDepts(); syncInvSelects(); refreshDataView();
+  toast('Deleted: ' + name, 'inf');
+}
+
+async function clearAllDepts() {
+  if (!departments.length) { toast('No departments to delete','inf'); return; }
+  if (!confirm('Delete ALL ' + departments.length + ' departments? This cannot be undone.')) return;
+  departments = [];
+  currentDept = '';
+  saveDepts();
+  renderDepts(); syncInvSelects(); refreshDataView();
+  toast('All departments cleared','inf');
 }
 
 // ═══════════════════════════════════════════════════════════════
