@@ -778,60 +778,43 @@ const db = firebase.firestore();
 // A dummy openDB function so your init() doesn't break while we upgrade
 function openDB() { return Promise.resolve(db); }
 function dbGet(store, key) {
-  return new Promise((res, rej) => {
-    const tx = db.transaction(store,'readonly');
-    const req = tx.objectStore(store).get(key);
-    req.onsuccess = () => res(req.result);
-    req.onerror   = () => rej(req.error);
-  });
+  return db.collection(store).doc(String(key)).get()
+    .then(doc => doc.exists ? doc.data() : undefined);
 }
+
 function dbPut(store, val) {
-  return new Promise((res, rej) => {
-    const tx = db.transaction(store,'readwrite');
-    const req = tx.objectStore(store).put(val);
-    req.onsuccess = () => res(req.result);
-    req.onerror   = () => rej(req.error);
-  });
+  // Config uses 'key', Products use 'id'. This handles both.
+  const docId = String(val.id || val.key); 
+  return db.collection(store).doc(docId).set(val).then(() => val);
 }
+
 function dbAdd(store, val) {
-  return new Promise((res, rej) => {
-    const tx = db.transaction(store,'readwrite');
-    const req = tx.objectStore(store).add(val);
-    req.onsuccess = () => res(req.result);
-    req.onerror   = () => rej(req.error);
-  });
+  // Generate a new cloud ID and attach it to the invoice
+  const docRef = db.collection(store).doc();
+  val.id = docRef.id; 
+  return docRef.set(val).then(() => val);
 }
+
 function dbDelete(store, key) {
-  return new Promise((res, rej) => {
-    const tx = db.transaction(store,'readwrite');
-    const req = tx.objectStore(store).delete(key);
-    req.onsuccess = () => res();
-    req.onerror   = () => rej(req.error);
-  });
+  return db.collection(store).doc(String(key)).delete();
 }
+
 function dbGetAll(store) {
-  return new Promise((res, rej) => {
-    const tx = db.transaction(store,'readonly');
-    const req = tx.objectStore(store).getAll();
-    req.onsuccess = () => res(req.result);
-    req.onerror   = () => rej(req.error);
-  });
+  return db.collection(store).get()
+    .then(snapshot => snapshot.docs.map(doc => doc.data()));
 }
+
 function dbClear(store) {
-  return new Promise((res, rej) => {
-    const tx = db.transaction(store,'readwrite');
-    const req = tx.objectStore(store).clear();
-    req.onsuccess = () => res();
-    req.onerror   = () => rej(req.error);
+  // To clear a collection in the cloud, we batch delete all documents inside it
+  return db.collection(store).get().then(snapshot => {
+    const batch = db.batch();
+    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+    return batch.commit();
   });
 }
+
 function dbCount(store) {
-  return new Promise((res, rej) => {
-    const tx = db.transaction(store,'readonly');
-    const req = tx.objectStore(store).count();
-    req.onsuccess = () => res(req.result);
-    req.onerror   = () => rej(req.error);
-  });
+  return db.collection(store).get().then(snapshot => snapshot.size);
 }
 
 // ═══════════════════════════════════════════════════════════════
