@@ -748,35 +748,35 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
   <button onclick="ctxDelete()">✕ Delete</button>
 </div>
 <div class="toast-wrap" id="toasts"></div>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 
 <script>
 // ═══════════════════════════════════════════════════════════════
 // DATABASE  (IndexedDB)
 // ═══════════════════════════════════════════════════════════════
-const DB_NAME = 'MalikMedicalPOS', DB_VER = 1;
-let db = null;
 
-function openDB() {
-  return new Promise((res, rej) => {
-    const req = indexedDB.open(DB_NAME, DB_VER);
-    req.onupgradeneeded = e => {
-      const d = e.target.result;
-      if (!d.objectStoreNames.contains('invoices')) {
-        const inv = d.createObjectStore('invoices', { keyPath:'id', autoIncrement:true });
-        inv.createIndex('date','date',{unique:false});
-      }
-      if (!d.objectStoreNames.contains('products')) {
-        d.createObjectStore('products', { keyPath:'id' });
-      }
-      if (!d.objectStoreNames.contains('config')) {
-        d.createObjectStore('config', { keyPath:'key' });
-      }
-    };
-    req.onsuccess = e => { db = e.target.result; res(db); };
-    req.onerror   = e => rej(e.target.error);
-  });
-}
+// ═══════════════════════════════════════════════════════════════
+// DATABASE  (Cloud Firestore)
+// ═══════════════════════════════════════════════════════════════
 
+// Paste your specific config block here
+const firebaseConfig = {
+  apiKey: "AIzaSyDReFlPBDX_5J81sBLwbPgjfJK6uyqnEWM",
+  authDomain: "malikpos.firebaseapp.com",
+  projectId: "malikpos",
+  storageBucket: "malikpos.firebasestorage.app",
+  messagingSenderId: "280860989917",
+  appId: "1:280860989917:web:6c58a7429c962242a8be34",
+  measurementId: "G-EDGHR11QQP"
+};
+
+// Initialize the Cloud Connection
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// A dummy openDB function so your init() doesn't break while we upgrade
+function openDB() { return Promise.resolve(db); }
 function dbGet(store, key) {
   return new Promise((res, rej) => {
     const tx = db.transaction(store,'readonly');
