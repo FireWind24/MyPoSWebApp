@@ -280,7 +280,7 @@ button,input,select{font-family:inherit}
 kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2px 6px;font-size:9px;font-family:var(--mono);color:var(--t2)}
 
 /* ── CART PANEL ── */
-#cart-panel{background:var(--s1)}
+#cart-panel{background:var(--s1);overflow-y:auto}
 .cart-list{flex:1;overflow-y:auto}
 .cart-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;height:100%;min-height:140px;color:var(--t3)}
 .cart-empty-icon{font-size:36px;opacity:.15}
@@ -319,7 +319,7 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
 .receipt-toggle-btn:hover{color:var(--t)}
 .receipt-body{display:none;border-top:1px solid var(--bd)}
 .receipt-body.open{display:block}
-.receipt-pre{font-family:var(--mono);font-size:10px;color:var(--g);background:#020807;padding:12px 16px;white-space:pre-wrap;line-height:1.7;max-height:180px;overflow-y:auto}
+.receipt-pre{font-family:var(--mono);font-size:10px;color:var(--g);background:#020807;padding:12px 16px;white-space:pre-wrap;line-height:1.7;max-height:260px;overflow-y:auto}
 .receipt-acts{padding:8px 16px;background:var(--s2);border-top:1px solid var(--bd);display:none;gap:6px}
 .receipt-acts.show{display:flex}
 
@@ -765,45 +765,50 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
 // ═══════════════════════════════════════════════════════════════
 const supabaseUrl = 'https://ixprytnwmgcztxhktlhm.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4cHJ5dG53bWdjenR4aGt0bGhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODY2MTEsImV4cCI6MjA4ODM2MjYxMX0.0rlrP4CMeK5Immpf8NusnrD_FncYVapORqZykXARDeg';
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-// Dummy openDB to keep init() happy
-function openDB() { return Promise.resolve(supabase); }
+// Renamed to dbClient — 'supabase' is already taken by the CDN global, collision kills the script
+const dbClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-// Helper to handle Primary Keys (config uses 'key', others use 'id')
+function openDB() { return Promise.resolve(dbClient); }
 function getPk(store) { return store === 'config' ? 'key' : 'id'; }
 
 async function dbGet(store, key) {
-  const { data, error } = await supabase.from(store).select('*').eq(getPk(store), String(key)).single();
-  return error ? undefined : data;
+  const { data, error } = await dbClient.from(store).select('*').eq(getPk(store), String(key)).single();
+  if (error && error.code !== 'PGRST116') console.error('dbGet:', error.message);
+  return data || undefined;
 }
 
 async function dbPut(store, val) {
-  const { data, error } = await supabase.from(store).upsert(val).select().single();
+  const { data, error } = await dbClient.from(store).upsert(val).select().single();
+  if (error) { console.error('dbPut:', error.message); toast('Cloud save failed!', 'err'); }
   return data || val;
 }
 
 async function dbAdd(store, val) {
-  const { data, error } = await supabase.from(store).insert(val).select().single();
+  const { data, error } = await dbClient.from(store).insert(val).select().single();
+  if (error) { console.error('dbAdd:', error.message); toast('Cloud save failed!', 'err'); }
   return data || val;
 }
 
 async function dbDelete(store, key) {
-  await supabase.from(store).delete().eq(getPk(store), String(key));
+  const { error } = await dbClient.from(store).delete().eq(getPk(store), String(key));
+  if (error) { console.error('dbDelete:', error.message); toast('Cloud delete failed!', 'err'); }
 }
 
 async function dbGetAll(store) {
-  const { data, error } = await supabase.from(store).select('*');
+  const { data, error } = await dbClient.from(store).select('*');
+  if (error) { console.error('dbGetAll:', error.message); return []; }
   return data || [];
 }
 
 async function dbClear(store) {
-  // Supabase needs a filter to delete all, so we tell it to delete where ID is not null
-  await supabase.from(store).delete().not(getPk(store), 'is', null);
+  const { error } = await dbClient.from(store).delete().not(getPk(store), 'is', null);
+  if (error) console.error('dbClear:', error.message);
 }
 
 async function dbCount(store) {
-  const { count, error } = await supabase.from(store).select('*', { count: 'exact', head: true });
+  const { count, error } = await dbClient.from(store).select('*', { count: 'exact', head: true });
+  if (error) console.error('dbCount:', error.message);
   return count || 0;
 }
 // ═══════════════════════════════════════════════════════════════
@@ -1225,9 +1230,8 @@ async function completeCheckout() {
   const recBtn  = document.getElementById('receipt-toggle-btn');
   recBody.classList.add('open');
   recBtn.textContent = '▲ Hide';
-  // Scroll the cart panel to the bottom so receipt is visible
-  const cartPanel = document.getElementById('cart-panel');
-  setTimeout(() => cartPanel.scrollTop = cartPanel.scrollHeight, 50);
+  // Scroll receipt into view
+  setTimeout(() => document.getElementById('receipt-bar').scrollIntoView({behavior:'smooth', block:'end'}), 80);
   // Reset register scroll to top so VFD header is visible
   document.getElementById('reg-scroll').scrollTop = 0;
   setStatus(`✓ Sale complete! Change: Rs ${change.toFixed(2)}`,'ok');
@@ -1438,17 +1442,24 @@ async function renderInvoiceList() {
   const q  = document.getElementById('invl-srch').value.toLowerCase();
   const df = document.getElementById('invl-date').value;
   let invs = await dbGetAll('invoices');
-  invs.sort((a,b)=>b.date-a.date);
+  invs.sort((a,b)=>{
+    const da = typeof a.date==='number' ? a.date : new Date(a.date).getTime();
+    const db_ = typeof b.date==='number' ? b.date : new Date(b.date).getTime();
+    return db_-da;
+  });
 
   if (df) {
     const day = new Date(df); day.setHours(0,0,0,0);
     const dayEnd = new Date(df); dayEnd.setHours(23,59,59,999);
-    invs = invs.filter(inv => inv.date>=day.getTime() && inv.date<=dayEnd.getTime());
+    invs = invs.filter(inv => {
+      const d = typeof inv.date === 'number' ? inv.date : new Date(inv.date).getTime();
+      return d >= day.getTime() && d <= dayEnd.getTime();
+    });
   }
   if (q) {
     invs = invs.filter(inv =>
       inv.total.toFixed(2).includes(q) ||
-      inv.items.some(i=>i.name.toLowerCase().includes(q)) ||
+      (Array.isArray(inv.items) && inv.items.some(i=>i&&i.name&&i.name.toLowerCase().includes(q))) ||
       inv.dateStr.includes(q)
     );
   }
@@ -1461,7 +1472,7 @@ async function renderInvoiceList() {
     return;
   }
   invs.forEach((inv,i) => {
-    const dt=new Date(inv.date);
+    const dt=new Date(typeof inv.date==='number' ? inv.date : inv.dateStr || inv.date);
     const row=document.createElement('div');
     row.className='invl-row'+(inv.id===selectedInvoiceId?' sel':'');
     row.innerHTML=`
@@ -1471,16 +1482,16 @@ async function renderInvoiceList() {
       </div>
       <div class="invl-row-date">${dt.toLocaleDateString('en-PK',{weekday:'short',year:'numeric',month:'short',day:'numeric'})} · ${dt.toLocaleTimeString()}</div>
       <div class="invl-row-items">${inv.items.length} item${inv.items.length!==1?'s':''}: ${inv.items.map(i=>i.name).slice(0,3).join(', ')}${inv.items.length>3?'…':''}</div>`;
-    row.onclick=()=>showInvoiceDetail(inv);
+    row.onclick=(e)=>showInvoiceDetail(inv, e.currentTarget);
     list.appendChild(row);
   });
 }
 
-function showInvoiceDetail(inv) {
+function showInvoiceDetail(inv, rowEl) {
   selectedInvoiceId = inv.id;
   document.querySelectorAll('.invl-row').forEach(r=>r.classList.remove('sel'));
-  event.currentTarget.classList.add('sel');
-  const dt=new Date(inv.date);
+  if (rowEl) rowEl.classList.add('sel');
+  const dt=new Date(typeof inv.date==='number' ? inv.date : inv.dateStr || inv.date);
   const detail=document.getElementById('invl-detail');
   const itemsHtml=inv.items.map(it=>`
     <div class="inv-item-row">
@@ -1511,8 +1522,8 @@ function showInvoiceDetail(inv) {
         </div>
       </div>
       <div class="inv-rc-acts">
-        <button class="btn btn-ghost btn-sm" onclick="printInvDetail(${inv.id})">⎙ Print</button>
-        <button class="btn btn-ghost-r btn-sm" onclick="deleteInvoice(${inv.id})">🗑 Delete</button>
+        <button class="btn btn-ghost btn-sm" onclick="printInvDetail('${inv.id}')">⎙ Print</button>
+        <button class="btn btn-ghost-r btn-sm" onclick="deleteInvoice('${inv.id}')">🗑 Delete</button>
       </div>
     </div>`;
 }
@@ -1529,7 +1540,7 @@ async function deleteInvoice(id) {
 async function printInvDetail(id) {
   const invs = await dbGetAll('invoices');
   const inv = invs.find(i=>i.id===id); if (!inv) return;
-  const dt=new Date(inv.date);
+  const dt=new Date(typeof inv.date==='number' ? inv.date : inv.dateStr || inv.date);
   let lines='';
   inv.items.forEach(item=>{
     lines+=`${(item.dept||'').padEnd(14)} ${item.name}\n  ${item.qty} x Rs${item.price.toFixed(2).padStart(8)} = Rs${item.total.toFixed(2)}\n`;
@@ -1552,7 +1563,10 @@ async function quickReport(range) {
   else { start=new Date(0); end=new Date(); }
   const labels={today:'TODAY',week:'THIS WEEK',month:'THIS MONTH',all:'ALL TIME'};
   const all=await dbGetAll('invoices');
-  const invs = range==='all' ? all : all.filter(i=>i.date>=start.getTime()&&i.date<=end.getTime());
+  const invs = range==='all' ? all : all.filter(i=>{
+    const d = typeof i.date==='number' ? i.date : new Date(i.date).getTime();
+    return d>=start.getTime()&&d<=end.getTime();
+  });
   buildReport(invs,labels[range],start.toLocaleDateString(),end.toLocaleDateString());
 }
 
@@ -1562,7 +1576,10 @@ async function customReport() {
   const start=new Date(s), end=new Date(e);
   if (start>end) { toast('Start must be before end','err'); return; }
   const all=await dbGetAll('invoices');
-  const invs=all.filter(i=>i.date>=start.getTime()&&i.date<=end.getTime());
+  const invs=all.filter(i=>{
+    const d = typeof i.date==='number' ? i.date : new Date(i.date).getTime();
+    return d>=start.getTime()&&d<=end.getTime();
+  });
   buildReport(invs,'CUSTOM RANGE',start.toLocaleString(),end.toLocaleString());
 }
 
@@ -1600,7 +1617,10 @@ async function loadTodayStats() {
   const start=new Date(); start.setHours(0,0,0,0);
   const end=new Date(); end.setHours(23,59,59,999);
   const all=await dbGetAll('invoices');
-  const today=all.filter(i=>i.date>=start.getTime()&&i.date<=end.getTime());
+  const today=all.filter(i=>{
+    const d = typeof i.date==='number' ? i.date : new Date(i.date).getTime();
+    return d>=start.getTime()&&d<=end.getTime();
+  });
   const total=today.reduce((s,i)=>s+i.total,0);
   document.getElementById('tb-sales').textContent=`Rs ${total.toFixed(2)}`;
   document.getElementById('tb-txns').textContent=today.length;
