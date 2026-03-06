@@ -1,0 +1,1744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Malik Medical Store — POS</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:    #090d14;
+  --s1:    #0f1520;
+  --s2:    #151e2e;
+  --s3:    #1c2840;
+  --s4:    #243252;
+  --bd:    #1e2d45;
+  --bd2:   #2a3d5a;
+  --g:     #00d68f;
+  --g2:    #00b87a;
+  --glo:   rgba(0,214,143,0.06);
+  --b:     #4d9eff;
+  --b2:    #2478d4;
+  --blo:   rgba(77,158,255,0.07);
+  --r:     #f05252;
+  --rlo:   rgba(240,82,82,0.08);
+  --y:     #f59e0b;
+  --ylo:   rgba(245,158,11,0.08);
+  --pu:    #a78bfa;
+  --t:     #dde6f5;
+  --t2:    #7a90b0;
+  --t3:    #3d5070;
+  --mono:  'IBM Plex Mono', monospace;
+  --sans:  'Plus Jakarta Sans', sans-serif;
+  --rad:   8px;
+  --trs:   0.13s ease;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:var(--sans);background:var(--bg);color:var(--t);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select{font-family:inherit}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
+
+/* ── SHELL ── */
+.app{display:grid;grid-template-rows:48px 1fr;height:100vh;width:100vw}
+
+/* ── TOPBAR ── */
+.topbar{
+  background:var(--s1);
+  border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;
+  padding:0 20px;gap:0;
+  box-shadow:0 1px 0 var(--bd);
+}
+.tb-logo{
+  font-family:var(--mono);font-size:12px;font-weight:700;
+  color:var(--g);letter-spacing:2px;white-space:nowrap;
+  padding-right:20px;border-right:1px solid var(--bd);
+  display:flex;align-items:center;gap:8px;
+}
+.tb-logo-dot{width:7px;height:7px;background:var(--g);border-radius:50%;box-shadow:0 0 8px var(--g);animation:pulse-dot 2.5s ease-in-out infinite}
+@keyframes pulse-dot{0%,100%{opacity:1;box-shadow:0 0 8px var(--g)}50%{opacity:.5;box-shadow:0 0 3px var(--g)}}
+.tb-logo span{color:var(--t2);font-weight:400}
+
+.tb-nav{display:flex;height:48px;margin-left:4px;gap:2px;padding:0 4px}
+.tb-tab{
+  padding:0 16px;height:100%;display:flex;align-items:center;gap:7px;
+  font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--t3);
+  cursor:pointer;border-bottom:2px solid transparent;transition:color var(--trs),border-color var(--trs);
+  text-transform:uppercase;white-space:nowrap;background:none;
+  border-top:none;border-left:none;border-right:none;
+}
+.tb-tab:hover{color:var(--t2)}
+.tb-tab.active{color:var(--g);border-bottom-color:var(--g)}
+.tb-tab-icon{font-size:14px;line-height:1}
+
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:0}
+.tb-metric{
+  display:flex;flex-direction:column;align-items:flex-end;
+  padding:0 16px;border-left:1px solid var(--bd);
+}
+.tb-metric-v{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--g)}
+.tb-metric-l{font-size:9px;letter-spacing:1.5px;color:var(--t3);font-weight:700;text-transform:uppercase;margin-top:1px}
+.tb-clock-wrap{padding:0 20px;border-left:1px solid var(--bd);text-align:right}
+.tb-time{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--t);letter-spacing:.5px}
+.tb-date{font-size:9px;color:var(--t3);letter-spacing:1px;margin-top:1px}
+
+/* ── VIEWS ── */
+.view{display:none;height:100%}
+.view.active{display:flex}
+
+/* ── POS VIEW — 3-PANEL ── */
+#pos-view{display:none;grid-template-columns:210px 1fr 360px;height:100%;gap:0}
+#pos-view.active{display:grid}
+
+/* ── PANELS ── */
+.panel{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--bd)}
+.panel:last-child{border-right:none}
+.ph{
+  padding:11px 16px;background:var(--s2);border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+  min-height:44px;
+}
+.ph-title{font-size:9px;font-weight:800;letter-spacing:2.5px;color:var(--t3);text-transform:uppercase}
+.panel-scroll{flex:1;overflow-y:auto;overflow-x:hidden}
+.pfoot{background:var(--s2);border-top:1px solid var(--bd);padding:10px 12px;flex-shrink:0}
+
+/* ── DEPT PANEL ── */
+#dept-panel .panel-scroll{padding:6px}
+.dept-searchbox{
+  padding:8px 6px 4px;
+}
+.dept-searchbox input{
+  width:100%;background:var(--s3);border:1px solid var(--bd);border-radius:var(--rad);
+  padding:7px 10px;color:var(--t);font-size:12px;outline:none;transition:border-color var(--trs);
+}
+.dept-searchbox input:focus{border-color:var(--b)}
+.dept-searchbox input::placeholder{color:var(--t3)}
+
+.dept-list{display:flex;flex-direction:column;gap:1px;padding:2px 6px 8px}
+.dept-item{
+  padding:8px 10px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;
+  letter-spacing:.2px;color:var(--t2);border:1px solid transparent;
+  transition:all var(--trs);display:flex;align-items:center;gap:6px;
+}
+.dept-item:hover{background:var(--s3);color:var(--t)}
+.dept-item.sel{background:var(--glo);border-color:rgba(0,214,143,.18);color:var(--g)}
+.dept-item-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dept-badge{
+  font-family:var(--mono);font-size:9px;color:var(--t3);background:var(--s4);
+  padding:1px 5px;border-radius:8px;flex-shrink:0;
+}
+.dept-item.sel .dept-badge{background:rgba(0,214,143,.12);color:var(--g2)}
+
+.dept-add-form{display:flex;gap:6px;padding:0}
+.dept-add-inp{
+  flex:1;background:var(--s3);border:1px solid var(--bd);border-radius:var(--rad);
+  padding:7px 10px;color:var(--t);font-size:12px;outline:none;
+}
+.dept-add-inp:focus{border-color:var(--g)}
+.dept-add-inp::placeholder{color:var(--t3)}
+
+/* ── REGISTER PANEL ── */
+#reg-panel{background:linear-gradient(180deg,var(--bg) 0%,#0b1019 100%)}
+#reg-panel .panel-scroll{padding:14px 16px;display:flex;flex-direction:column;gap:11px}
+
+/* VFD Display */
+.vfd{
+  background:#03080d;border:1px solid #0d2030;border-radius:10px;
+  padding:14px 18px;font-family:var(--mono);position:relative;overflow:hidden;
+  box-shadow:inset 0 2px 12px rgba(0,0,0,.5),0 0 0 1px #071520;
+}
+.vfd::before{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,214,143,.01) 2px,rgba(0,214,143,.01) 3px);
+  pointer-events:none;
+}
+.vfd-row1{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.vfd-dept{font-size:9px;letter-spacing:2.5px;color:#1a5538;font-weight:700}
+.vfd-count{font-size:9px;color:#1a4030;letter-spacing:1px}
+.vfd-item{font-size:17px;color:var(--g);font-weight:500;min-height:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80%}
+.vfd-divider{border:none;border-top:1px solid #0a2018;margin:10px 0}
+.vfd-foot{display:flex;justify-content:space-between;align-items:flex-end}
+.vfd-total{font-size:30px;font-weight:700;color:var(--g);letter-spacing:-.5px}
+.vfd-meta{text-align:right}
+.vfd-cash{font-size:11px;color:#1d6040;min-height:16px}
+.vfd-change{font-size:14px;color:#00d68f;font-weight:700;min-height:19px}
+
+@keyframes vfd-pulse{0%,100%{border-color:#0d2030;box-shadow:inset 0 2px 12px rgba(0,0,0,.5)}50%{border-color:rgba(0,214,143,.3);box-shadow:inset 0 2px 12px rgba(0,0,0,.5),0 0 24px rgba(0,214,143,.08)}}
+.vfd.checking{animation:vfd-pulse .9s ease-in-out infinite}
+@keyframes vfd-flash{0%{background:rgba(0,214,143,.12)}100%{background:#03080d}}
+.vfd.done{animation:vfd-flash .7s ease-out forwards}
+
+/* Search + Autocomplete */
+.search-label{font-size:9px;font-weight:800;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-bottom:6px}
+.search-wrap{position:relative}
+.search-inp{
+  width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:var(--rad);
+  padding:10px 14px;color:var(--t);font-size:14px;font-weight:500;outline:none;
+  transition:border-color var(--trs),box-shadow var(--trs);
+}
+.search-inp:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(0,214,143,.07)}
+.search-inp::placeholder{color:var(--t3);font-size:12px;font-weight:400}
+
+.ac-drop{
+  position:absolute;top:calc(100% + 5px);left:0;right:0;
+  background:var(--s2);border:1px solid var(--bd2);border-radius:10px;
+  z-index:200;max-height:260px;overflow-y:auto;
+  box-shadow:0 12px 40px rgba(0,0,0,.6),0 0 0 1px var(--bd);
+  display:none;
+}
+.ac-drop.open{display:block;animation:acIn .15s ease}
+@keyframes acIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+
+.ac-divider{
+  padding:4px 12px;font-size:9px;font-weight:800;letter-spacing:2px;
+  color:var(--t3);background:var(--s3);border-top:1px solid var(--bd);
+  border-bottom:1px solid var(--bd);text-transform:uppercase;
+}
+.ac-item{
+  padding:9px 14px;cursor:pointer;display:grid;
+  grid-template-columns:1fr auto auto;align-items:center;gap:10px;
+  border-bottom:1px solid var(--bd);transition:background var(--trs);
+}
+.ac-item:last-child{border-bottom:none}
+.ac-item:hover,.ac-item.focused{background:var(--s3)}
+.ac-item-name{font-size:13px;font-weight:600;color:var(--t);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac-item-name mark{background:none;color:var(--g);font-weight:800}
+.ac-dept-tag{
+  font-size:9px;color:var(--b);background:var(--blo);border:1px solid rgba(77,158,255,.15);
+  padding:2px 6px;border-radius:3px;letter-spacing:.5px;font-weight:800;white-space:nowrap;
+}
+.ac-price{font-family:var(--mono);font-size:12px;color:var(--g);font-weight:600;white-space:nowrap}
+
+/* Fields */
+.field-row{display:grid;grid-template-columns:1fr 110px 80px auto;gap:8px;align-items:end}
+.field-group{display:flex;flex-direction:column;gap:5px}
+.field-lbl{font-size:9px;font-weight:800;letter-spacing:2px;color:var(--t3);text-transform:uppercase}
+.field-inp{
+  background:var(--s2);border:1px solid var(--bd);border-radius:var(--rad);
+  padding:9px 12px;color:var(--t);font-family:var(--mono);font-size:14px;
+  font-weight:600;outline:none;width:100%;
+  transition:border-color var(--trs),box-shadow var(--trs);
+}
+.field-inp:focus{border-color:var(--b);box-shadow:0 0 0 3px var(--blo)}
+.field-inp.locked{color:var(--g);border-color:rgba(0,214,143,.25);background:rgba(0,214,143,.03)}
+
+/* Discount row */
+.disc-strip{
+  display:flex;align-items:center;gap:10px;
+  background:var(--s2);border:1px solid var(--bd);border-radius:var(--rad);
+  padding:8px 12px;
+}
+.disc-lbl{font-size:9px;font-weight:800;letter-spacing:1.5px;color:var(--t3);text-transform:uppercase;white-space:nowrap}
+.disc-field{
+  width:62px;background:var(--s3);border:1px solid var(--bd);border-radius:5px;
+  padding:4px 8px;color:var(--y);font-family:var(--mono);font-size:13px;
+  font-weight:700;outline:none;text-align:right;transition:border-color var(--trs);
+}
+.disc-field:focus{border-color:var(--y)}
+.disc-saved{font-family:var(--mono);font-size:11px;color:var(--y)}
+.disc-final{font-family:var(--mono);font-size:13px;color:var(--g);font-weight:700;margin-left:auto}
+
+/* Status */
+.status-line{height:20px;font-size:11px;font-weight:700;padding:0 2px;transition:color .2s}
+.status-line.err{color:var(--r)}
+.status-line.ok{color:var(--g)}
+.status-line.inf{color:var(--b)}
+
+/* Action row */
+.act-row{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:8px}
+
+/* Cash section */
+.cash-section{display:none;flex-direction:column;gap:8px;
+  background:var(--s2);border:1px solid rgba(0,214,143,.2);
+  border-radius:10px;padding:12px;
+  box-shadow:0 0 24px rgba(0,214,143,.04);
+}
+.cash-section.visible{display:flex}
+.cash-lbl{font-size:9px;font-weight:800;letter-spacing:2px;color:var(--g2);text-transform:uppercase}
+.cash-inp{
+  width:100%;background:#03080d;border:1px solid var(--g);border-radius:var(--rad);
+  padding:11px 14px;color:var(--g);font-family:var(--mono);font-size:24px;
+  font-weight:700;text-align:right;outline:none;
+  box-shadow:0 0 0 3px rgba(0,214,143,.06);transition:box-shadow var(--trs);
+}
+.cash-inp:focus{box-shadow:0 0 0 4px rgba(0,214,143,.12)}
+.qc-row{display:flex;gap:5px;flex-wrap:wrap}
+.qc-btn{
+  flex:1;min-width:42px;padding:5px 4px;
+  background:var(--s3);border:1px solid var(--bd2);border-radius:5px;
+  color:var(--t2);font-family:var(--mono);font-size:10px;font-weight:700;
+  cursor:pointer;text-align:center;transition:all var(--trs);
+}
+.qc-btn:hover{border-color:var(--g);color:var(--g)}
+.qc-btn.exact{border-color:rgba(0,214,143,.25);color:var(--g)}
+
+/* KBD hints */
+.kbd-row{display:flex;flex-wrap:wrap;gap:8px}
+.kbd-hint{font-size:10px;color:var(--t3);display:flex;align-items:center;gap:4px}
+kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2px 6px;font-size:9px;font-family:var(--mono);color:var(--t2)}
+
+/* ── CART PANEL ── */
+#cart-panel{background:var(--s1)}
+.cart-list{flex:1;overflow-y:auto}
+.cart-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;height:100%;min-height:140px;color:var(--t3)}
+.cart-empty-icon{font-size:36px;opacity:.15}
+.cart-empty-txt{font-size:9px;font-weight:800;letter-spacing:3px;text-transform:uppercase}
+
+.cart-row{
+  display:grid;grid-template-columns:1fr auto auto;align-items:start;
+  padding:10px 16px;gap:8px;border-bottom:1px solid rgba(30,45,69,.6);
+  transition:background var(--trs);
+}
+.cart-row:hover{background:rgba(30,45,69,.4)}
+.cart-row:last-child{border-bottom:none}
+@keyframes rowIn{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:translateX(0)}}
+.cart-row{animation:rowIn .14s ease}
+.cr-name{font-size:12px;font-weight:700;color:var(--t)}
+.cr-meta{font-size:10px;color:var(--t3);margin-top:2px;font-family:var(--mono)}
+.cr-dtag{font-size:9px;color:var(--b);background:var(--blo);padding:1px 4px;border-radius:2px;letter-spacing:.3px;display:inline-block;margin-right:5px;font-weight:700}
+.cr-price{font-family:var(--mono);font-size:13px;color:var(--g);font-weight:600;padding-top:2px;white-space:nowrap}
+.cr-del{background:none;border:none;color:var(--t3);cursor:pointer;font-size:16px;padding:2px 5px;border-radius:4px;transition:all var(--trs);line-height:1;padding-top:3px}
+.cr-del:hover{color:var(--r);background:var(--rlo)}
+
+.cart-foot{background:var(--s2);border-top:1px solid var(--bd);padding:12px 16px;flex-shrink:0}
+.cs-row{display:flex;justify-content:space-between;align-items:center;padding:2px 0}
+.cs-lbl{font-size:10px;color:var(--t3);font-weight:700}
+.cs-val{font-family:var(--mono);font-size:12px;color:var(--t2)}
+.cs-total-row{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)}
+.cs-total-lbl{font-size:10px;font-weight:800;letter-spacing:1.5px;color:var(--t2);text-transform:uppercase}
+.cs-total-val{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--g)}
+
+.receipt-bar{
+  padding:8px 16px;background:var(--s2);border-top:1px solid var(--bd);
+  display:none;align-items:center;justify-content:space-between;
+}
+.receipt-bar.show{display:flex}
+.receipt-toggle-btn{font-size:10px;font-weight:800;letter-spacing:1px;color:var(--t3);background:none;border:none;cursor:pointer;text-transform:uppercase;transition:color var(--trs)}
+.receipt-toggle-btn:hover{color:var(--t)}
+.receipt-body{display:none;border-top:1px solid var(--bd)}
+.receipt-body.open{display:block}
+.receipt-pre{font-family:var(--mono);font-size:10px;color:var(--g);background:#020807;padding:12px 16px;white-space:pre-wrap;line-height:1.7;max-height:180px;overflow-y:auto}
+.receipt-acts{padding:8px 16px;background:var(--s2);border-top:1px solid var(--bd);display:none;gap:6px}
+.receipt-acts.show{display:flex}
+
+/* ── BUTTONS ── */
+.btn{
+  padding:9px 14px;border:none;border-radius:var(--rad);
+  font-family:var(--sans);font-weight:800;font-size:11px;letter-spacing:.6px;
+  cursor:pointer;transition:all var(--trs);text-transform:uppercase;
+  white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:5px;
+}
+.btn:active{transform:scale(.96)}
+.btn-g{background:var(--g);color:#031a0f}
+.btn-g:hover{background:#00ffb2;box-shadow:0 0 20px rgba(0,214,143,.2)}
+.btn-b{background:var(--b);color:#fff}
+.btn-b:hover{background:#70b8ff;box-shadow:0 0 20px rgba(77,158,255,.2)}
+.btn-r{background:var(--r);color:#fff}
+.btn-r:hover{background:#ff7070}
+.btn-y{background:var(--y);color:#1a0a00}
+.btn-y:hover{background:#fbbf24}
+.btn-pu{background:var(--pu);color:#fff}
+.btn-pu:hover{background:#c4b5fd}
+.btn-ghost{background:transparent;border:1px solid var(--bd2);color:var(--t3)}
+.btn-ghost:hover{border-color:var(--g);color:var(--g);background:var(--glo)}
+.btn-ghost-b{background:transparent;border:1px solid var(--bd2);color:var(--t3)}
+.btn-ghost-b:hover{border-color:var(--b);color:var(--b);background:var(--blo)}
+.btn-ghost-r{background:transparent;border:1px solid rgba(240,82,82,.2);color:var(--r)}
+.btn-ghost-r:hover{border-color:var(--r);background:var(--rlo)}
+.btn-sm{padding:6px 11px;font-size:10px}
+.btn-xs{padding:4px 8px;font-size:9px}
+.btn-full{width:100%}
+
+/* ── INVENTORY ── */
+#inv-view{flex-direction:column;height:100%}
+#inv-view.active{display:flex}
+.inv-form{background:var(--s1);border-bottom:1px solid var(--bd);padding:14px 20px;flex-shrink:0}
+.inv-form-title{font-size:9px;font-weight:800;letter-spacing:2.5px;color:var(--t3);text-transform:uppercase;margin-bottom:10px}
+.inv-form-grid{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:end}
+.ff{display:flex;flex-direction:column;gap:4px}
+.ff-lbl{font-size:9px;font-weight:800;letter-spacing:1.5px;color:var(--t3);text-transform:uppercase}
+.ff-inp{background:var(--s2);border:1px solid var(--bd);border-radius:var(--rad);padding:8px 11px;color:var(--t);font-size:13px;font-weight:500;outline:none;width:100%;transition:border-color var(--trs),box-shadow var(--trs)}
+.ff-inp:focus{border-color:var(--g);box-shadow:0 0 0 2px rgba(0,214,143,.07)}
+.ff-sel{background:var(--s2);border:1px solid var(--bd);border-radius:var(--rad);padding:8px 11px;color:var(--t);font-size:13px;outline:none;cursor:pointer;width:100%;transition:border-color var(--trs)}
+.ff-sel:focus{border-color:var(--g)}
+
+.inv-toolbar{padding:10px 20px;background:var(--s1);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.inv-srch{flex:1;max-width:340px;background:var(--s2);border:1px solid var(--bd);border-radius:var(--rad);padding:8px 12px;color:var(--t);font-size:13px;outline:none;transition:border-color var(--trs)}
+.inv-srch:focus{border-color:var(--b)}
+.inv-srch::placeholder{color:var(--t3)}
+.inv-dept-sel{background:var(--s2);border:1px solid var(--bd);border-radius:var(--rad);padding:8px 10px;color:var(--t);font-size:12px;outline:none;cursor:pointer;transition:border-color var(--trs)}
+.inv-dept-sel:focus{border-color:var(--b)}
+
+.inv-table-wrap{flex:1;overflow-y:auto;padding:0}
+.inv-table{width:100%;border-collapse:collapse;font-size:12px}
+.inv-table th{
+  text-align:left;padding:10px 16px;font-size:9px;font-weight:800;letter-spacing:1.5px;
+  color:var(--t3);text-transform:uppercase;background:var(--s2);border-bottom:1px solid var(--bd);
+  position:sticky;top:0;z-index:1;
+}
+.inv-table td{padding:10px 16px;border-bottom:1px solid rgba(30,45,69,.4);vertical-align:middle}
+.inv-table tr:hover td{background:rgba(21,30,46,.8)}
+.inv-table tr:last-child td{border-bottom:none}
+.td-name{font-weight:700;color:var(--t)}
+.td-dept-tag{font-size:9px;color:var(--b);background:var(--blo);border:1px solid rgba(77,158,255,.15);padding:2px 6px;border-radius:3px;letter-spacing:.5px;font-weight:800;white-space:nowrap}
+.td-price{font-family:var(--mono);color:var(--g);font-weight:700}
+.td-acts{display:flex;gap:5px;justify-content:flex-end}
+
+/* ── INVOICES ── */
+#invl-view{flex-direction:column;height:100%}
+#invl-view.active{display:flex}
+.invl-toolbar{padding:10px 20px;background:var(--s1);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.invl-srch{flex:1;max-width:320px;background:var(--s2);border:1px solid var(--bd);border-radius:var(--rad);padding:8px 12px;color:var(--t);font-size:13px;outline:none;transition:border-color var(--trs)}
+.invl-srch:focus{border-color:var(--b)}
+.invl-srch::placeholder{color:var(--t3)}
+.invl-date{background:var(--s2);border:1px solid var(--bd);border-radius:var(--rad);padding:8px 10px;color:var(--t);font-family:var(--mono);font-size:11px;outline:none;transition:border-color var(--trs)}
+.invl-date:focus{border-color:var(--b)}
+
+.invl-layout{flex:1;display:grid;grid-template-columns:360px 1fr;overflow:hidden}
+.invl-list{border-right:1px solid var(--bd);overflow-y:auto;background:var(--s1)}
+.invl-detail{overflow-y:auto;padding:20px;background:var(--bg)}
+
+.invl-row{
+  padding:12px 16px;border-bottom:1px solid rgba(30,45,69,.5);
+  cursor:pointer;transition:background var(--trs);display:flex;flex-direction:column;gap:4px;
+}
+.invl-row:hover{background:var(--s2)}
+.invl-row.sel{background:var(--s3);border-left:2px solid var(--g)}
+.invl-row-top{display:flex;justify-content:space-between;align-items:center}
+.invl-row-id{font-family:var(--mono);font-size:10px;color:var(--t3);font-weight:600}
+.invl-row-amt{font-family:var(--mono);font-size:14px;color:var(--g);font-weight:700}
+.invl-row-date{font-size:11px;color:var(--t2);font-weight:600}
+.invl-row-items{font-size:10px;color:var(--t3)}
+
+.inv-detail-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;color:var(--t3)}
+.inv-detail-empty-icon{font-size:40px;opacity:.12}
+
+.inv-receipt-card{background:var(--s1);border:1px solid var(--bd);border-radius:12px;overflow:hidden;max-width:520px}
+.inv-rc-head{padding:14px 18px;background:var(--s2);border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center}
+.inv-rc-id{font-family:var(--mono);font-size:11px;color:var(--t3);font-weight:600}
+.inv-rc-amt{font-family:var(--mono);font-size:18px;color:var(--g);font-weight:700}
+.inv-rc-body{padding:16px 18px;display:flex;flex-direction:column;gap:14px}
+.inv-item-list{display:flex;flex-direction:column;gap:6px}
+.inv-item-row{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--s2);border-radius:6px}
+.inv-item-name{font-size:12px;font-weight:700;color:var(--t)}
+.inv-item-sub{font-size:10px;color:var(--t3);font-family:var(--mono);margin-top:1px}
+.inv-item-tot{font-family:var(--mono);font-size:12px;color:var(--g);font-weight:600}
+.inv-totals{border-top:1px solid var(--bd);padding-top:12px;display:flex;flex-direction:column;gap:5px}
+.inv-tot-row{display:flex;justify-content:space-between}
+.inv-tot-lbl{font-size:11px;color:var(--t3);font-weight:600}
+.inv-tot-val{font-family:var(--mono);font-size:12px;color:var(--t2)}
+.inv-tot-val.green{color:var(--g)}
+.inv-rc-acts{padding:12px 18px;background:var(--s2);border-top:1px solid var(--bd);display:flex;gap:7px}
+
+/* ── REPORTS ── */
+#rep-view{flex-direction:column;height:100%}
+#rep-view.active{display:flex}
+.rep-layout{flex:1;display:grid;grid-template-columns:280px 1fr;overflow:hidden}
+.rep-side{border-right:1px solid var(--bd);background:var(--s1);padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.rep-main{padding:20px;overflow-y:auto;background:var(--bg)}
+
+.rep-card{background:var(--s2);border:1px solid var(--bd);border-radius:10px;overflow:hidden}
+.rep-card-head{padding:9px 13px;background:var(--s3);border-bottom:1px solid var(--bd);font-size:9px;font-weight:800;letter-spacing:2px;color:var(--t3);text-transform:uppercase}
+.rep-card-body{padding:11px 13px}
+.rep-btns{display:flex;flex-direction:column;gap:6px}
+.rep-date-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:9px}
+.rdf{display:flex;flex-direction:column;gap:4px}
+.rdf label{font-size:9px;font-weight:800;letter-spacing:1.5px;color:var(--t3);text-transform:uppercase}
+.rdf input{background:var(--s3);border:1px solid var(--bd);border-radius:6px;padding:7px 9px;color:var(--t);font-family:var(--mono);font-size:11px;outline:none;transition:border-color var(--trs)}
+.rdf input:focus{border-color:var(--b)}
+
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.stat-card{background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:14px 16px}
+.sc-lbl{font-size:9px;font-weight:800;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-bottom:8px}
+.sc-val{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--g)}
+.sc-val.blue{color:var(--b)}
+.sc-val.yel{color:var(--y)}
+.sc-val.wh{color:var(--t)}
+
+.rep-output{background:#020807;border:1px solid #0a1f15;border-radius:10px;font-family:var(--mono);font-size:11px;color:var(--g);padding:18px;white-space:pre-wrap;line-height:1.75;min-height:200px}
+
+/* ── DATA VIEW ── */
+#data-view{flex-direction:column;height:100%}
+#data-view.active{display:flex}
+.data-body{flex:1;overflow-y:auto;padding:20px}
+.data-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.data-block{background:var(--s1);border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+.db-head{padding:11px 16px;background:var(--s2);border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center}
+.db-head-title{font-size:10px;font-weight:800;letter-spacing:2px;color:var(--t3);text-transform:uppercase}
+.db-head-badge{font-family:var(--mono);font-size:11px;font-weight:600}
+.db-body{padding:14px 16px;display:flex;flex-direction:column;gap:9px}
+.db-desc{font-size:11px;color:var(--t3);line-height:1.7}
+
+/* ── TOAST ── */
+.toast-wrap{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column-reverse;gap:7px;z-index:9999;pointer-events:none}
+.toast{padding:9px 18px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:.3px;animation:tIn .2s ease;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+.toast.ok{background:rgba(0,214,143,.1);border:1px solid var(--g2);color:var(--g)}
+.toast.err{background:rgba(240,82,82,.1);border:1px solid var(--r);color:var(--r)}
+.toast.inf{background:rgba(77,158,255,.1);border:1px solid var(--b2);color:var(--b)}
+.toast.out{animation:tOut .25s ease forwards}
+@keyframes tIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes tOut{to{opacity:0}}
+
+/* ── CTX MENU ── */
+.ctx{position:fixed;background:var(--s2);border:1px solid var(--bd2);border-radius:9px;padding:5px 0;z-index:1000;display:none;min-width:140px;box-shadow:0 12px 36px rgba(0,0,0,.6)}
+.ctx button{display:block;width:100%;padding:8px 16px;background:none;border:none;color:var(--t);font-family:var(--sans);font-size:12px;font-weight:700;text-align:left;cursor:pointer;transition:background var(--trs)}
+.ctx button:hover{background:var(--s3);color:var(--b)}
+.ctx hr{border:none;border-top:1px solid var(--bd);margin:4px 0}
+
+/* ── MODAL ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+.modal-bg.open{display:flex}
+.modal{background:var(--s1);border:1px solid var(--bd2);border-radius:14px;width:520px;max-width:96vw;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.7);animation:modalIn .2s ease}
+@keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(-8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-head{padding:16px 20px;background:var(--s2);border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center}
+.modal-title{font-size:12px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--t)}
+.modal-close{background:none;border:none;color:var(--t3);font-size:18px;cursor:pointer;line-height:1;transition:color var(--trs)}
+.modal-close:hover{color:var(--t)}
+.modal-body{padding:20px}
+
+@media print{body *{visibility:hidden}.receipt-pre,.receipt-pre *{visibility:visible}.receipt-pre{position:fixed;left:0;top:0;width:100%;max-height:none;background:white;color:black;padding:24px;font-size:12px}}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ══ TOPBAR ══ -->
+<div class="topbar">
+  <div class="tb-logo"><span class="tb-logo-dot"></span>MALIK <span>MEDICAL</span></div>
+  <nav class="tb-nav">
+    <button class="tb-tab active" onclick="switchTab('pos')" id="tab-pos"><span class="tb-tab-icon">🧾</span>Register</button>
+    <button class="tb-tab" onclick="switchTab('inv')" id="tab-inv"><span class="tb-tab-icon">📦</span>Inventory</button>
+    <button class="tb-tab" onclick="switchTab('invl')" id="tab-invl"><span class="tb-tab-icon">🗂</span>Invoices</button>
+    <button class="tb-tab" onclick="switchTab('rep')" id="tab-rep"><span class="tb-tab-icon">📊</span>Reports</button>
+    <button class="tb-tab" onclick="switchTab('data')" id="tab-data"><span class="tb-tab-icon">⚙️</span>Data</button>
+  </nav>
+  <div class="tb-right">
+    <div class="tb-metric"><span class="tb-metric-v" id="tb-sales">Rs 0.00</span><span class="tb-metric-l">Today's Sales</span></div>
+    <div class="tb-metric"><span class="tb-metric-v" id="tb-txns">0</span><span class="tb-metric-l">Transactions</span></div>
+    <div class="tb-clock-wrap"><div class="tb-time" id="tb-time">00:00:00</div><div class="tb-date" id="tb-date">---</div></div>
+  </div>
+</div>
+
+<!-- ══ POS VIEW ══ -->
+<div id="pos-view" class="active">
+
+  <!-- DEPT PANEL -->
+  <div class="panel" id="dept-panel">
+    <div class="ph"><span class="ph-title">Departments</span><button class="btn btn-ghost btn-xs" onclick="openDeptForm()">＋</button></div>
+    <div class="dept-searchbox"><input id="dept-search" placeholder="Search…" oninput="filterDepts(this.value)" onkeydown="handleDeptSearchKey(event)"></div>
+    <div class="panel-scroll"><div class="dept-list" id="dept-list"></div></div>
+    <div class="pfoot" id="dept-form" style="display:none">
+      <div class="dept-add-form">
+        <input class="dept-add-inp" id="new-dept-inp" placeholder="Department name…" onkeydown="if(event.key==='Enter')addDept();if(event.key==='Escape')closeDeptForm();">
+        <button class="btn btn-g btn-sm" onclick="addDept()">Add</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeDeptForm()">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REGISTER PANEL -->
+  <div class="panel" id="reg-panel">
+    <div class="ph"><span class="ph-title" id="reg-title">Register</span><span style="font-family:var(--mono);font-size:10px;color:var(--t3)" id="reg-count">0 items</span></div>
+    <div class="panel-scroll" id="reg-scroll">
+
+      <div class="vfd" id="vfd">
+        <div class="vfd-row1"><div class="vfd-dept" id="vfd-dept">SELECT A DEPARTMENT</div><div class="vfd-count" id="vfd-count"></div></div>
+        <div class="vfd-item" id="vfd-item">READY</div>
+        <div class="vfd-divider"></div>
+        <div class="vfd-foot">
+          <div class="vfd-total" id="vfd-total">Rs 0.00</div>
+          <div class="vfd-meta"><div class="vfd-cash" id="vfd-cash"></div><div class="vfd-change" id="vfd-change"></div></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="search-label">Product Search</div>
+        <div class="search-wrap">
+          <input class="search-inp" id="item-search" placeholder="Type product name… e.g. Panadol, Brufen" autocomplete="off" oninput="onSearchInput()" onkeydown="onSearchKey(event)">
+          <div class="ac-drop" id="ac-drop"></div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-group"><div class="field-lbl">Quantity</div><input class="field-inp" id="f-qty" type="number" min="1" value="1" onkeydown="onFieldKey(event)" onfocus="this.select()"></div>
+        <div class="field-group"><div class="field-lbl">Price (Rs)</div><input class="field-inp" id="f-price" type="number" min="0" step="0.01" placeholder="0.00" onkeydown="onFieldKey(event)" onfocus="this.select()"></div>
+        <div class="field-group" style="align-self:end"><button class="btn btn-g btn-full" onclick="addItem()" style="height:38px">＋ Add</button></div>
+      </div>
+
+      <div class="disc-strip">
+        <span class="disc-lbl">Disc %</span>
+        <input class="disc-field" id="disc-pct" type="number" min="0" max="100" step=".5" placeholder="0" oninput="onDiscInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('item-search').focus()}if(event.key==='Escape'){this.value='';onDiscInput();document.getElementById('item-search').focus()}">
+        <span class="disc-saved" id="disc-saved">—</span>
+        <span class="disc-final" id="disc-final">Rs 0.00</span>
+      </div>
+
+      <div class="status-line" id="status-line"></div>
+
+      <div class="act-row">
+        <button class="btn btn-g" onclick="addItem()">＋ Add Item</button>
+        <button class="btn btn-ghost" onclick="clearEntry()">✕ Clear</button>
+        <button class="btn btn-b" id="checkout-btn" onclick="initiateCheckout()">⟩ Checkout</button>
+      </div>
+
+      <div class="cash-section" id="cash-section">
+        <div class="cash-lbl">Cash Received</div>
+        <input class="cash-inp" id="cash-inp" type="number" min="0" step="0.01" placeholder="0.00" oninput="previewChange()" onkeydown="onCashKey(event)">
+        <div class="qc-row" id="qc-row"></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-g btn-full" onclick="completeCheckout()">✓ Complete Sale</button>
+          <button class="btn btn-ghost" onclick="cancelCheckout()">Cancel</button>
+        </div>
+      </div>
+
+      <div class="kbd-row">
+        <span class="kbd-hint"><kbd>Enter</kbd> Add</span>
+        <span class="kbd-hint"><kbd>Shift+Enter</kbd> Checkout</span>
+        <span class="kbd-hint"><kbd>Ctrl+Shift+Enter</kbd> Complete</span>
+        <span class="kbd-hint"><kbd>Esc</kbd> Clear</span>
+        <span class="kbd-hint"><kbd>F2</kbd> New sale</span>
+        <span class="kbd-hint"><kbd>↑↓</kbd> Navigate</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CART PANEL -->
+  <div class="panel" id="cart-panel">
+    <div class="ph"><span class="ph-title">Current Sale</span><button class="btn btn-ghost btn-xs" style="color:var(--r)" onclick="newSale()">↺ New Sale</button></div>
+    <div class="cart-list" id="cart-list">
+      <div class="cart-empty"><div class="cart-empty-icon">🛒</div><div class="cart-empty-txt">No items added</div></div>
+    </div>
+    <div class="cart-foot">
+      <div class="cs-row"><span class="cs-lbl">Subtotal</span><span class="cs-val" id="cs-sub">Rs 0.00</span></div>
+      <div class="cs-row" id="cs-disc-row" style="display:none"><span class="cs-lbl">Discount</span><span class="cs-val" style="color:var(--y)" id="cs-disc">—</span></div>
+      <div class="cs-total-row"><span class="cs-total-lbl">Total</span><span class="cs-total-val" id="cs-total">Rs 0.00</span></div>
+    </div>
+    <div class="receipt-bar" id="receipt-bar"><span style="font-size:9px;font-weight:800;letter-spacing:2px;color:var(--t3)">RECEIPT</span><button class="receipt-toggle-btn" onclick="toggleReceipt()" id="receipt-toggle-btn">▼ Show</button></div>
+    <div class="receipt-body" id="receipt-body"><pre class="receipt-pre" id="receipt-pre"></pre></div>
+    <div class="receipt-acts" id="receipt-acts">
+      <button class="btn btn-ghost btn-sm" onclick="printReceipt()">⎙ Print</button>
+      <button class="btn btn-ghost btn-sm" onclick="dlTxt()">↓ TXT</button>
+      <button class="btn btn-ghost-b btn-sm" onclick="dlPDF()">↓ PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ INVENTORY VIEW ══ -->
+<div id="inv-view" class="view">
+  <div class="inv-form">
+    <div class="inv-form-title" id="inv-form-title">Add New Product</div>
+    <div class="inv-form-grid">
+      <div class="ff"><label class="ff-lbl">Product Name</label><input class="ff-inp" id="pf-name" placeholder="e.g. Panadol 500mg" autocomplete="off" onkeydown="onPfKey(event,'pf-price')" oninput="pfNameHint()"></div>
+      <div class="ff"><label class="ff-lbl">Department</label><select class="ff-sel" id="pf-dept" onkeydown="onPfKey(event,'pf-price')"></select></div>
+      <div class="ff"><label class="ff-lbl">Unit Price (Rs)</label><input class="ff-inp" id="pf-price" type="number" min="0" step="0.01" placeholder="0.00" onkeydown="onPfKey(event,null)"></div>
+      <div style="display:flex;gap:6px;align-items:flex-end">
+        <button class="btn btn-g" onclick="saveProduct()" id="pf-save">Save</button>
+        <button class="btn btn-ghost" onclick="cancelPf()" id="pf-cancel" style="display:none">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div class="inv-toolbar">
+    <input class="inv-srch" id="inv-srch" placeholder="Search products…" oninput="renderInventory()" onkeydown="if(event.key==='Escape'){this.value='';renderInventory()}">
+    <select class="inv-dept-sel" id="inv-dept-sel" onchange="renderInventory()"><option value="">All Departments</option></select>
+    <span style="font-size:11px;color:var(--t3);margin-left:auto;font-weight:600" id="inv-count-lbl">0 products</span>
+  </div>
+  <div class="inv-table-wrap">
+    <table class="inv-table">
+      <thead><tr><th style="width:36px">#</th><th>Product Name</th><th>Department</th><th>Unit Price</th><th style="text-align:right">Actions</th></tr></thead>
+      <tbody id="inv-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══ INVOICES VIEW ══ -->
+<div id="invl-view" class="view">
+  <div class="invl-toolbar">
+    <input class="invl-srch" id="invl-srch" placeholder="Search by amount, item…" oninput="renderInvoiceList()">
+    <input class="invl-date" type="date" id="invl-date" onchange="renderInvoiceList()" title="Filter by date">
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('invl-date').value='';renderInvoiceList()">Clear Filter</button>
+    <span style="font-size:11px;color:var(--t3);margin-left:auto;font-weight:600" id="invl-count-lbl">0 invoices</span>
+    <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬆ Export CSV</button>
+  </div>
+  <div class="invl-layout">
+    <div class="invl-list" id="invl-list"></div>
+    <div class="invl-detail" id="invl-detail">
+      <div class="inv-detail-empty"><div class="inv-detail-empty-icon">🗂</div><span style="font-size:9px;font-weight:800;letter-spacing:2px;color:var(--t3)">SELECT AN INVOICE</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ REPORTS VIEW ══ -->
+<div id="rep-view" class="view">
+  <div class="rep-layout">
+    <div class="rep-side">
+      <div class="rep-card">
+        <div class="rep-card-head">Quick Reports</div>
+        <div class="rep-card-body rep-btns">
+          <button class="btn btn-b btn-full btn-sm" onclick="quickReport('today')">📆 Today</button>
+          <button class="btn btn-ghost btn-full btn-sm" onclick="quickReport('week')">📅 This Week</button>
+          <button class="btn btn-ghost btn-full btn-sm" onclick="quickReport('month')">🗓 This Month</button>
+          <button class="btn btn-ghost btn-full btn-sm" onclick="quickReport('all')">📋 All Time</button>
+        </div>
+      </div>
+      <div class="rep-card">
+        <div class="rep-card-head">Custom Range</div>
+        <div class="rep-card-body">
+          <div class="rep-date-grid">
+            <div class="rdf"><label>From</label><input type="datetime-local" id="rep-start" onkeydown="if(event.key==='Enter')document.getElementById('rep-end').focus()"></div>
+            <div class="rdf"><label>To</label><input type="datetime-local" id="rep-end" onkeydown="if(event.key==='Enter')customReport()"></div>
+          </div>
+          <button class="btn btn-g btn-full btn-sm" onclick="customReport()">Generate</button>
+        </div>
+      </div>
+      <div class="rep-card">
+        <div class="rep-card-head">Export</div>
+        <div class="rep-card-body rep-btns">
+          <button class="btn btn-ghost btn-full btn-sm" onclick="printReport()">⎙ Print</button>
+          <button class="btn btn-ghost btn-full btn-sm" onclick="dlReport()">↓ Download TXT</button>
+        </div>
+      </div>
+    </div>
+    <div class="rep-main" id="rep-main">
+      <div class="stat-grid" id="stat-grid" style="display:none"></div>
+      <div class="rep-output" id="rep-output">Select a report range from the left panel.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DATA VIEW ══ -->
+<div id="data-view" class="view">
+  <div class="data-body">
+    <div class="data-grid">
+      <div class="data-block">
+        <div class="db-head"><span class="db-head-title">Invoice Database</span><span class="db-head-badge" style="color:var(--g)" id="db-inv-count">0 records</span></div>
+        <div class="db-body">
+          <p class="db-desc">Invoices are stored in IndexedDB — a proper browser database. Data persists across sessions. Export regularly as backup.</p>
+          <button class="btn btn-g btn-sm" onclick="exportCSV()">⬆ Export CSV</button>
+          <label class="btn btn-ghost btn-sm" style="cursor:pointer;position:relative;overflow:hidden">⬇ Import CSV<input type="file" accept=".csv" style="position:absolute;inset:0;opacity:0;cursor:pointer" onchange="importCSV(event)"></label>
+          <button class="btn btn-ghost-r btn-sm" onclick="clearInvoices()">🗑 Clear All Invoices</button>
+        </div>
+      </div>
+      <div class="data-block">
+        <div class="db-head"><span class="db-head-title">Product Database</span><span class="db-head-badge" style="color:var(--b)" id="db-prod-count">0 products</span></div>
+        <div class="db-body">
+          <p class="db-desc">Products stored in IndexedDB with name, department, and unit price. Used for autocomplete and quick billing.</p>
+          <button class="btn btn-b btn-sm" onclick="exportProducts()">⬆ Export JSON</button>
+          <label class="btn btn-ghost btn-sm" style="cursor:pointer;position:relative;overflow:hidden">⬇ Import JSON<input type="file" accept=".json" style="position:absolute;inset:0;opacity:0;cursor:pointer" onchange="importProducts(event)"></label>
+          <button class="btn btn-ghost-r btn-sm" onclick="clearProducts()">🗑 Clear Products</button>
+        </div>
+      </div>
+      <div class="data-block">
+        <div class="db-head"><span class="db-head-title">Departments</span><span class="db-head-badge" style="color:var(--pu)" id="db-dept-count">0</span></div>
+        <div class="db-body" id="db-dept-body"></div>
+      </div>
+      <div class="data-block">
+        <div class="db-head"><span class="db-head-title">Session Stats</span></div>
+        <div class="db-body" id="db-session-body"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- .app -->
+
+<div class="ctx" id="ctx-menu">
+  <button onclick="ctxRename()">✎ Rename</button>
+  <button onclick="ctxDelete()">✕ Delete</button>
+</div>
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATABASE  (IndexedDB)
+// ═══════════════════════════════════════════════════════════════
+const DB_NAME = 'MalikMedicalPOS', DB_VER = 1;
+let db = null;
+
+function openDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('invoices')) {
+        const inv = d.createObjectStore('invoices', { keyPath:'id', autoIncrement:true });
+        inv.createIndex('date','date',{unique:false});
+      }
+      if (!d.objectStoreNames.contains('products')) {
+        d.createObjectStore('products', { keyPath:'id' });
+      }
+      if (!d.objectStoreNames.contains('config')) {
+        d.createObjectStore('config', { keyPath:'key' });
+      }
+    };
+    req.onsuccess = e => { db = e.target.result; res(db); };
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+function dbGet(store, key) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store,'readonly');
+    const req = tx.objectStore(store).get(key);
+    req.onsuccess = () => res(req.result);
+    req.onerror   = () => rej(req.error);
+  });
+}
+function dbPut(store, val) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store,'readwrite');
+    const req = tx.objectStore(store).put(val);
+    req.onsuccess = () => res(req.result);
+    req.onerror   = () => rej(req.error);
+  });
+}
+function dbAdd(store, val) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store,'readwrite');
+    const req = tx.objectStore(store).add(val);
+    req.onsuccess = () => res(req.result);
+    req.onerror   = () => rej(req.error);
+  });
+}
+function dbDelete(store, key) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store,'readwrite');
+    const req = tx.objectStore(store).delete(key);
+    req.onsuccess = () => res();
+    req.onerror   = () => rej(req.error);
+  });
+}
+function dbGetAll(store) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store,'readonly');
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess = () => res(req.result);
+    req.onerror   = () => rej(req.error);
+  });
+}
+function dbClear(store) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store,'readwrite');
+    const req = tx.objectStore(store).clear();
+    req.onsuccess = () => res();
+    req.onerror   = () => rej(req.error);
+  });
+}
+function dbCount(store) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store,'readonly');
+    const req = tx.objectStore(store).count();
+    req.onsuccess = () => res(req.result);
+    req.onerror   = () => rej(req.error);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let cart = [], cartTotal = 0, currentDept = '';
+let departments = [], products = [];
+let cashReceived = 0, checkoutMode = false;
+let acIdx = -1, acResults = [];
+let pfEditId = null, ctxDeptIdx = -1;
+let sessionSales = 0, sessionTxns = 0;
+let selectedInvoiceId = null;
+
+// ═══════════════════════════════════════════════════════════════
+// CLOCK
+// ═══════════════════════════════════════════════════════════════
+function tick() {
+  const n = new Date();
+  document.getElementById('tb-time').textContent = n.toLocaleTimeString();
+  document.getElementById('tb-date').textContent = n.toLocaleDateString('en-PK',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+}
+setInterval(tick,1000); tick();
+
+// ═══════════════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════════════
+const TABS = ['pos','inv','invl','rep','data'];
+function switchTab(tab) {
+  TABS.forEach(t => {
+    document.getElementById(`${t}-view`).classList.toggle('active', t===tab);
+    document.getElementById(`tab-${t}`).classList.toggle('active', t===tab);
+  });
+  if (tab==='inv')  { syncInvSelects(); renderInventory(); }
+  if (tab==='invl') { renderInvoiceList(); }
+  if (tab==='data') { refreshDataView(); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+async function init() {
+  await openDB();
+
+  // Load departments
+  const cfgDepts = await dbGet('config','departments');
+  departments = cfgDepts ? cfgDepts.value : [
+    'MEDICAL STORE','GEN STORE','HAFIZ ASLAM','STILLMENS','D SOFT','BYE BYE',
+    'SENIOR','MILK','AZITH','NEUROBIOTIC','HUMULIN','VIGA','DOSE','COCA COLA',
+    'TOY','DOCTOR','ROSIP','HAFIZ','FACEMASK','MACH','NESTLE WATER',
+    'ALWAYS PAD','SUGAR TEST','ALOPIA OIL','EMPRO','SALEBASE','ON THE GO'
+  ];
+  if (!cfgDepts) await saveDepts();
+
+  // Migrate legacy localStorage data if present
+  await migrateLegacy();
+
+  products = await dbGetAll('products');
+  renderDepts();
+  syncInvSelects();
+  buildQC();
+  await loadTodayStats();
+  document.getElementById('item-search').focus();
+
+  document.addEventListener('click', e => { if (!e.target.closest('#ctx-menu')) closeCtx(); });
+  document.getElementById('ac-drop').addEventListener('mousedown', e => e.preventDefault());
+  document.getElementById('item-search').addEventListener('blur', () => setTimeout(closeAC, 150));
+}
+
+async function migrateLegacy() {
+  const old = localStorage.getItem('mms_invoices');
+  if (!old) return;
+  const rows = old.split('\n').slice(1);
+  let migrated = 0;
+  for (const row of rows) {
+    if (!row.trim()) continue;
+    const p = row.split('|');
+    if (p.length < 9) continue;
+    const [ts, depts, items, qtys, prices, sub, total, cash, change, discPct] = p;
+    const dArr = depts.split(';'), nArr = items.split(';'), qArr = qtys.split(';').map(Number), prArr = prices.split(';').map(Number);
+    const invItems = nArr.map((name, i) => ({ name, dept: dArr[i]||'?', qty: qArr[i], price: prArr[i], total: qArr[i]*prArr[i] }));
+    await dbAdd('invoices', {
+      date: new Date(ts).getTime(), dateStr: ts,
+      items: invItems,
+      subtotal: parseFloat(sub), total: parseFloat(total),
+      cash: parseFloat(cash), change: parseFloat(change),
+      discPct: parseFloat(discPct||0)
+    }).catch(()=>{});
+    migrated++;
+  }
+  if (migrated > 0) {
+    localStorage.removeItem('mms_invoices');
+    toast(`Migrated ${migrated} legacy invoices to IndexedDB`, 'ok');
+  }
+  // Migrate products
+  const oldP = localStorage.getItem('mms_products');
+  if (oldP) {
+    const prods = JSON.parse(oldP);
+    for (const p of prods) await dbPut('products', p).catch(()=>{});
+    localStorage.removeItem('mms_products');
+  }
+  // Migrate departments
+  const oldD = localStorage.getItem('mms_depts');
+  if (oldD) {
+    departments = JSON.parse(oldD);
+    await saveDepts();
+    localStorage.removeItem('mms_depts');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DEPARTMENTS
+// ═══════════════════════════════════════════════════════════════
+async function saveDepts() { await dbPut('config', {key:'departments', value:departments}); }
+
+function renderDepts(filter='') {
+  const list = document.getElementById('dept-list');
+  list.innerHTML = '';
+  const fl = filter.toLowerCase();
+  let shown = filter ? departments.filter(d => d.toLowerCase().includes(fl)) : [...departments];
+  shown.sort((a,b) => a.localeCompare(b));
+  shown.forEach(d => {
+    const ri = departments.indexOf(d);
+    const cnt = products.filter(p => p.dept===d).length;
+    const el = document.createElement('div');
+    el.className = 'dept-item' + (d===currentDept ? ' sel' : '');
+    el.innerHTML = `<span class="dept-item-name">${esc(d)}</span><span class="dept-badge">${cnt}</span>`;
+    el.onclick = () => selectDept(d);
+    el.oncontextmenu = e => { e.preventDefault(); ctxDeptIdx=ri; showCtx(e); };
+    list.appendChild(el);
+  });
+}
+function filterDepts(v) { renderDepts(v); }
+function selectDept(d) {
+  currentDept = d;
+  document.getElementById('reg-title').textContent = `Register — ${d}`;
+  document.getElementById('vfd-dept').textContent = d;
+  renderDepts(document.getElementById('dept-search').value);
+  document.getElementById('item-search').focus();
+}
+function openDeptForm() { document.getElementById('dept-form').style.display='block'; document.getElementById('new-dept-inp').focus(); }
+function closeDeptForm() { document.getElementById('dept-form').style.display='none'; document.getElementById('new-dept-inp').value=''; }
+async function addDept() {
+  const v = document.getElementById('new-dept-inp').value.trim().toUpperCase();
+  if (!v) { toast('Enter a name','err'); return; }
+  if (departments.includes(v)) { toast('Already exists','err'); return; }
+  departments.push(v); await saveDepts();
+  renderDepts(); syncInvSelects(); closeDeptForm();
+  toast(`Added: ${v}`,'ok');
+}
+function showCtx(e) { const m=document.getElementById('ctx-menu'); m.style.display='block'; m.style.left=`${e.clientX}px`; m.style.top=`${e.clientY}px`; e.stopPropagation(); }
+function closeCtx() { document.getElementById('ctx-menu').style.display='none'; }
+async function ctxRename() {
+  if (ctxDeptIdx<0) return;
+  const n = prompt('Rename:', departments[ctxDeptIdx]);
+  if (n?.trim()) { departments[ctxDeptIdx]=n.trim().toUpperCase(); await saveDepts(); renderDepts(); syncInvSelects(); }
+  closeCtx();
+}
+async function ctxDelete() {
+  if (ctxDeptIdx<0) return;
+  const name = departments[ctxDeptIdx];
+  if (!confirm(`Delete "${name}"?`)) { closeCtx(); return; }
+  departments.splice(ctxDeptIdx,1); await saveDepts();
+  if (currentDept===name) currentDept='';
+  renderDepts(); syncInvSelects();
+  closeCtx(); toast('Deleted','inf');
+}
+function handleDeptSearchKey(e) {
+  if (e.key==='Enter') { e.preventDefault(); document.querySelector('#dept-list .dept-item')?.click(); }
+  else if (e.key==='Escape') { e.preventDefault(); document.getElementById('dept-search').value=''; filterDepts(''); document.getElementById('item-search').focus(); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AUTOCOMPLETE
+// ═══════════════════════════════════════════════════════════════
+function onSearchInput() {
+  const q = document.getElementById('item-search').value.trim();
+  acIdx = -1;
+  if (!q) { closeAC(); return; }
+  const ql = q.toLowerCase();
+  const all = products.filter(p => p.name.toLowerCase().includes(ql));
+  all.sort((a,b) => {
+    const ai = currentDept && a.dept===currentDept ? 0 : 1;
+    const bi = currentDept && b.dept===currentDept ? 0 : 1;
+    if (ai!==bi) return ai-bi;
+    return a.name.toLowerCase().indexOf(ql) - b.name.toLowerCase().indexOf(ql);
+  });
+  acResults = all.slice(0,12);
+  if (!acResults.length) { closeAC(); return; }
+  renderAC(q);
+}
+
+function renderAC(q) {
+  const drop = document.getElementById('ac-drop');
+  drop.innerHTML = '';
+  let shownDiv = false;
+  acResults.forEach((p,i) => {
+    if (currentDept && p.dept!==currentDept && !shownDiv) {
+      shownDiv = true;
+      const div = document.createElement('div');
+      div.className = 'ac-divider'; div.textContent = 'Other Departments';
+      drop.appendChild(div);
+    }
+    const el = document.createElement('div');
+    el.className = 'ac-item' + (i===acIdx ? ' focused' : '');
+    const safe = q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const hl = p.name.replace(new RegExp('('+safe+')','gi'),'<mark>$1</mark>');
+    el.innerHTML = `<span class="ac-item-name">${hl}</span><span class="ac-dept-tag">${esc(p.dept)}</span><span class="ac-price">Rs ${p.price.toFixed(2)}</span>`;
+    el.onmousedown = e => { e.preventDefault(); selectAC(i); };
+    drop.appendChild(el);
+  });
+  drop.classList.add('open');
+}
+
+function closeAC() { const d=document.getElementById('ac-drop'); d.classList.remove('open'); d.innerHTML=''; acResults=[]; acIdx=-1; }
+
+function selectAC(i) {
+  const p = acResults[i]; if (!p) return;
+  document.getElementById('item-search').value = p.name;
+  document.getElementById('f-price').value = p.price.toFixed(2);
+  document.getElementById('f-price').classList.add('locked');
+  if (p.dept) selectDept(p.dept);
+  closeAC();
+  const qEl = document.getElementById('f-qty');
+  qEl.value = 1; qEl.focus(); qEl.select();
+}
+
+function onSearchKey(e) {
+  const isOpen = document.getElementById('ac-drop').classList.contains('open');
+  if (e.key==='ArrowDown') { e.preventDefault(); if (!isOpen) return; acIdx=Math.min(acIdx+1,acResults.length-1); hlAC(); }
+  else if (e.key==='ArrowUp') { e.preventDefault(); acIdx=Math.max(acIdx-1,-1); hlAC(); }
+  else if (e.key==='Enter') {
+    if (e.ctrlKey && e.shiftKey) { e.preventDefault(); completeCheckout(); }
+    else if (e.shiftKey) { e.preventDefault(); initiateCheckout(); }
+    else if (isOpen && acIdx>=0) selectAC(acIdx);
+    else if (isOpen && acResults.length===1) selectAC(0);
+    else addItem();
+  }
+  else if (e.key==='Escape') { if (isOpen) closeAC(); else clearEntry(); }
+  else if (e.key==='Tab' && isOpen) { e.preventDefault(); selectAC(acIdx>=0?acIdx:0); }
+}
+
+function hlAC() {
+  document.querySelectorAll('.ac-item').forEach((el,i) => el.classList.toggle('focused',i===acIdx));
+  const items = document.querySelectorAll('.ac-item');
+  if (acIdx>=0 && items[acIdx]) items[acIdx].scrollIntoView({block:'nearest'});
+}
+
+function onFieldKey(e) {
+  if (e.ctrlKey && e.shiftKey && e.key==='Enter') { e.preventDefault(); completeCheckout(); }
+  else if (e.key==='Enter') { if (e.shiftKey) initiateCheckout(); else addItem(); }
+  else if (e.key==='Escape') { if (checkoutMode) cancelCheckout(); else clearEntry(); }
+}
+function onCashKey(e) {
+  if (e.key==='Enter') completeCheckout();
+  if (e.key==='Escape') cancelCheckout();
+}
+function onPfKey(e, nextId) {
+  if (e.key==='Enter') { e.preventDefault(); saveProduct(); }
+  else if (e.key==='Escape') { e.preventDefault(); cancelPf(); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CART
+// ═══════════════════════════════════════════════════════════════
+function addItem() {
+  if (checkoutMode) return;
+  const name  = document.getElementById('item-search').value.trim();
+  const qty   = parseInt(document.getElementById('f-qty').value);
+  const price = parseFloat(document.getElementById('f-price').value);
+  if (!currentDept)              { setStatus('Select a department first','err'); return; }
+  if (!name)                     { setStatus('Enter item name','err'); return; }
+  if (isNaN(price)||price<0)     { setStatus('Enter a valid price','err'); return; }
+  if (isNaN(qty)||qty<1)         { setStatus('Enter a valid quantity','err'); return; }
+
+  const total = price*qty;
+  cart.push({dept:currentDept,name,price,qty,total});
+  cartTotal += total;
+  document.getElementById('vfd-item').textContent = name;
+  document.getElementById('vfd-count').textContent = `${cart.length} ITEM${cart.length>1?'S':''}`;
+  updateVfdTotal();
+  renderCart();
+  clearEntry();
+  setStatus(`✓ ${name} × ${qty}  Rs ${total.toFixed(2)}`,'ok');
+  document.getElementById('reg-count').textContent = `${cart.length} item${cart.length!==1?'s':''}`;
+
+  // Auto-save new products
+  const existing = products.find(p=>p.name.toLowerCase()===name.toLowerCase()&&p.dept===currentDept);
+  if (!existing) {
+    const prod = {id:`p_${Date.now()}`,name,dept:currentDept,price};
+    products.push(prod);
+    dbPut('products',prod);
+    renderDepts(document.getElementById('dept-search').value);
+  }
+}
+
+function removeItem(i) {
+  cartTotal -= cart[i].total; cart.splice(i,1);
+  if (!cart.length) document.getElementById('vfd-item').textContent='READY';
+  document.getElementById('vfd-count').textContent = cart.length ? `${cart.length} ITEM${cart.length>1?'S':''}` : '';
+  updateVfdTotal(); renderCart();
+  document.getElementById('reg-count').textContent = `${cart.length} item${cart.length!==1?'s':''}`;
+  onDiscInput();
+}
+
+function renderCart() {
+  const list = document.getElementById('cart-list');
+  if (!cart.length) {
+    list.innerHTML = `<div class="cart-empty"><div class="cart-empty-icon">🛒</div><div class="cart-empty-txt">No items added</div></div>`;
+  } else {
+    list.innerHTML='';
+    cart.forEach((item,i) => {
+      const row = document.createElement('div');
+      row.className = 'cart-row';
+      row.innerHTML = `
+        <div><div class="cr-name">${esc(item.name)}</div><div class="cr-meta"><span class="cr-dtag">${esc(item.dept)}</span>${item.qty} × Rs ${item.price.toFixed(2)}</div></div>
+        <div class="cr-price">Rs ${item.total.toFixed(2)}</div>
+        <button class="cr-del" onclick="removeItem(${i})">×</button>`;
+      list.appendChild(row);
+    });
+  }
+  updateSummary();
+}
+
+function updateSummary() {
+  const disc = getDiscPct(), saved = cartTotal*(disc/100), final = cartTotal-saved;
+  document.getElementById('cs-sub').textContent = `Rs ${cartTotal.toFixed(2)}`;
+  document.getElementById('cs-disc-row').style.display = disc>0?'flex':'none';
+  document.getElementById('cs-disc').textContent = `—Rs ${saved.toFixed(2)}`;
+  document.getElementById('cs-total').textContent = `Rs ${final.toFixed(2)}`;
+}
+
+function updateVfdTotal() {
+  document.getElementById('vfd-total').textContent = `Rs ${getDiscountedTotal().toFixed(2)}`;
+}
+
+function getDiscPct() { return Math.min(100,Math.max(0,parseFloat(document.getElementById('disc-pct').value)||0)); }
+function getDiscountedTotal() { return cartTotal*(1-getDiscPct()/100); }
+
+function onDiscInput() {
+  const pct=getDiscPct(), saved=cartTotal*(pct/100), final=cartTotal-saved;
+  document.getElementById('disc-saved').textContent = pct>0?`−Rs ${saved.toFixed(2)}`:'—';
+  document.getElementById('disc-final').textContent = `Rs ${final.toFixed(2)}`;
+  updateVfdTotal(); updateSummary();
+  if (checkoutMode) previewChange();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHECKOUT
+// ═══════════════════════════════════════════════════════════════
+function initiateCheckout() {
+  if (!cart.length) { setStatus('Add items first','err'); return; }
+  checkoutMode = true;
+  document.getElementById('cash-section').classList.add('visible');
+  document.getElementById('vfd').classList.add('checking');
+  document.getElementById('vfd-item').textContent = 'ENTER CASH…';
+  document.getElementById('cash-inp').value='';
+  document.getElementById('vfd-cash').textContent='';
+  document.getElementById('vfd-change').textContent='';
+  document.getElementById('cash-inp').focus();
+  // Scroll register panel down to show cash section
+  const rs = document.getElementById('reg-scroll');
+  setTimeout(() => rs.scrollTop = rs.scrollHeight, 50);
+  setStatus('Enter cash received → Enter to complete','inf');
+}
+
+function cancelCheckout() {
+  checkoutMode = false;
+  document.getElementById('cash-section').classList.remove('visible');
+  document.getElementById('vfd').classList.remove('checking');
+  document.getElementById('vfd-item').textContent = cart.length ? cart[cart.length-1].name : 'READY';
+  document.getElementById('vfd-cash').textContent='';
+  document.getElementById('vfd-change').textContent='';
+  setStatus('Checkout cancelled','inf');
+}
+
+function previewChange() {
+  const cash = parseFloat(document.getElementById('cash-inp').value)||0;
+  const final = getDiscountedTotal(), chg = cash-final;
+  document.getElementById('vfd-cash').textContent=`CASH: Rs ${cash.toFixed(2)}`;
+  document.getElementById('vfd-change').textContent=chg>=0?`CHANGE: Rs ${chg.toFixed(2)}`:`SHORT: Rs ${Math.abs(chg).toFixed(2)}`;
+}
+
+async function completeCheckout() {
+  const cash = parseFloat(document.getElementById('cash-inp').value);
+  const final = getDiscountedTotal();
+  if (isNaN(cash)||cash<0) { setStatus('Invalid amount','err'); return; }
+  if (cash<final) { setStatus(`Short by Rs ${(final-cash).toFixed(2)}`,'err'); return; }
+
+  cashReceived = cash;
+  const change = cash-final;
+  const discPct = getDiscPct();
+
+  document.getElementById('vfd-cash').textContent=`CASH: Rs ${cash.toFixed(2)}`;
+  document.getElementById('vfd-change').textContent=`CHANGE: Rs ${change.toFixed(2)}`;
+  document.getElementById('vfd').classList.remove('checking');
+  document.getElementById('vfd').classList.add('done');
+  document.getElementById('cash-section').classList.remove('visible');
+  document.getElementById('vfd-item').textContent='✓ SALE COMPLETE';
+  setTimeout(()=>document.getElementById('vfd').classList.remove('done'),800);
+
+  sessionSales += final; sessionTxns++;
+  checkoutMode = false;
+
+  // Save to IndexedDB
+  const inv = {
+    date: Date.now(), dateStr: new Date().toISOString(),
+    items: cart.map(i=>({...i})),
+    subtotal: cartTotal, total: final,
+    cash: cashReceived, change, discPct
+  };
+  await dbAdd('invoices', inv);
+  await loadTodayStats();
+
+  buildReceipt(final, change, discPct);
+  document.getElementById('receipt-bar').classList.add('show');
+  document.getElementById('receipt-acts').classList.add('show');
+  // Auto-open receipt and scroll cart panel to show it
+  const recBody = document.getElementById('receipt-body');
+  const recBtn  = document.getElementById('receipt-toggle-btn');
+  recBody.classList.add('open');
+  recBtn.textContent = '▲ Hide';
+  // Scroll the cart panel to the bottom so receipt is visible
+  const cartPanel = document.getElementById('cart-panel');
+  setTimeout(() => cartPanel.scrollTop = cartPanel.scrollHeight, 50);
+  // Reset register scroll to top so VFD header is visible
+  document.getElementById('reg-scroll').scrollTop = 0;
+  setStatus(`✓ Sale complete! Change: Rs ${change.toFixed(2)}`,'ok');
+  toast(`Change: Rs ${change.toFixed(2)}`,'ok');
+}
+
+function buildQC() {
+  const wrap = document.getElementById('qc-row');
+  wrap.innerHTML='';
+  [100,200,500,1000,2000,5000].forEach(a=>{
+    const b=document.createElement('button');
+    b.className='qc-btn';
+    b.textContent=a>=1000?`${a/1000}K`:a;
+    b.onclick=()=>{ document.getElementById('cash-inp').value=a; previewChange(); };
+    wrap.appendChild(b);
+  });
+  const ex=document.createElement('button'); ex.className='qc-btn exact'; ex.textContent='Exact';
+  ex.onclick=()=>{ document.getElementById('cash-inp').value=getDiscountedTotal().toFixed(2); previewChange(); };
+  wrap.appendChild(ex);
+}
+
+function newSale() {
+  cart=[]; cartTotal=0; cashReceived=0; checkoutMode=false;
+  ['vfd-item','vfd-cash','vfd-change','vfd-count'].forEach(id=>document.getElementById(id).textContent=id==='vfd-item'?'READY':'');
+  document.getElementById('vfd-total').textContent='Rs 0.00';
+  document.getElementById('vfd').classList.remove('checking','done');
+  document.getElementById('cash-section').classList.remove('visible');
+  document.getElementById('disc-pct').value='';
+  document.getElementById('disc-saved').textContent='—';
+  document.getElementById('disc-final').textContent='Rs 0.00';
+  document.getElementById('receipt-bar').classList.remove('show');
+  document.getElementById('receipt-acts').classList.remove('show');
+  document.getElementById('receipt-body').classList.remove('open');
+  document.getElementById('receipt-toggle-btn').textContent='▼ Show';
+  document.getElementById('reg-count').textContent='0 items';
+  renderCart(); clearEntry();
+  document.getElementById('reg-scroll').scrollTop = 0;
+  toast('New sale started','inf');
+}
+
+function clearEntry() {
+  document.getElementById('item-search').value='';
+  document.getElementById('f-qty').value='1';
+  document.getElementById('f-price').value='';
+  document.getElementById('f-price').classList.remove('locked');
+  closeAC();
+  document.getElementById('item-search').focus();
+}
+
+function setStatus(msg,type='') {
+  const el=document.getElementById('status-line');
+  el.textContent=msg; el.className='status-line '+type;
+  if (msg) setTimeout(()=>{ if(el.textContent===msg){el.textContent='';el.className='status-line';} },3000);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RECEIPT
+// ═══════════════════════════════════════════════════════════════
+function buildReceipt(finalTotal, change, discPct) {
+  const now=new Date();
+  let lines='';
+  cart.forEach(item=>{
+    lines+=`${item.dept.padEnd(14)} ${item.name}\n  ${item.qty} x Rs${item.price.toFixed(2).padStart(8)} = Rs${item.total.toFixed(2)}\n`;
+  });
+  let dl=''; if(discPct>0) dl=`DISCOUNT (${discPct}%): -Rs ${(cartTotal-finalTotal).toFixed(2)}\n`;
+  document.getElementById('receipt-pre').textContent=
+`==========================
+    MALIK MEDICAL STORE
+==========================
+${now.toLocaleString()}
+--------------------------
+${lines}--------------------------
+SUBTOTAL  : Rs ${cartTotal.toFixed(2)}
+${dl}TOTAL     : Rs ${finalTotal.toFixed(2)}
+CASH      : Rs ${cashReceived.toFixed(2)}
+CHANGE    : Rs ${change.toFixed(2)}
+==========================
+        THANK YOU!
+==========================`;
+}
+
+function toggleReceipt() {
+  const b=document.getElementById('receipt-body'); const btn=document.getElementById('receipt-toggle-btn');
+  const o=b.classList.toggle('open'); btn.textContent=o?'▲ Hide':'▼ Show';
+}
+function printReceipt() {
+  const txt=document.getElementById('receipt-pre').textContent; if(!txt) return;
+  const w=window.open('','_blank');
+  w.document.write(`<html><head><title>Receipt</title><style>body{font-family:monospace;white-space:pre-wrap;padding:20px;font-size:13px;line-height:1.6}</style></head><body>${esc(txt)}</body></html>`);
+  w.document.close(); setTimeout(()=>{w.print();w.close();},200);
+}
+function dlTxt() { dlBlob(document.getElementById('receipt-pre').textContent,'text/plain',`Malik-Invoice-${new Date().toISOString().slice(0,10)}.txt`); toast('Downloaded','ok'); }
+function dlPDF() {
+  const txt=document.getElementById('receipt-pre').textContent;
+  const w=window.open('','_blank');
+  w.document.write(`<html><head><title>Invoice</title><style>body{font-family:monospace;white-space:pre-wrap;padding:16px;font-size:12px;line-height:1.6}@page{size:80mm auto;margin:5mm}</style></head><body>${esc(txt)}</body></html>`);
+  w.document.close(); setTimeout(()=>w.print(),300);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INVENTORY
+// ═══════════════════════════════════════════════════════════════
+function pfNameHint() {
+  const q = document.getElementById('pf-name').value.trim().toLowerCase();
+  if (!q) return;
+  const match = products.find(p => p.name.toLowerCase().startsWith(q));
+  if (match) {
+    const sel = document.getElementById('pf-dept');
+    if (sel.value !== match.dept) sel.value = match.dept;
+  }
+}
+
+function syncInvSelects() {
+  const pfd=document.getElementById('pf-dept');
+  const cur=pfd.value;
+  const sorted=[...departments].sort((a,b)=>a.localeCompare(b));
+  pfd.innerHTML=sorted.map(d=>`<option value="${esc(d)}" ${d===cur?'selected':''}>${esc(d)}</option>`).join('');
+  const invSel=document.getElementById('inv-dept-sel');
+  invSel.innerHTML=`<option value="">All Departments</option>`+sorted.map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('');
+}
+
+function renderInventory() {
+  const q=document.getElementById('inv-srch').value.toLowerCase();
+  const dept=document.getElementById('inv-dept-sel').value;
+  const tbody=document.getElementById('inv-tbody');
+  tbody.innerHTML='';
+  const filtered=products.filter(p=>(!q||p.name.toLowerCase().includes(q))&&(!dept||p.dept===dept));
+  document.getElementById('inv-count-lbl').textContent=`${filtered.length} product${filtered.length!==1?'s':''}`;
+  if (!filtered.length) {
+    tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--t3);font-size:11px;letter-spacing:1px;font-weight:700">NO PRODUCTS FOUND</td></tr>`;
+    return;
+  }
+  filtered.forEach((p,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td style="color:var(--t3);font-family:var(--mono);font-size:10px">${i+1}</td>
+      <td class="td-name">${esc(p.name)}</td>
+      <td><span class="td-dept-tag">${esc(p.dept)}</span></td>
+      <td class="td-price">Rs ${p.price.toFixed(2)}</td>
+      <td class="td-acts">
+        <button class="btn btn-ghost btn-xs" onclick="editProduct('${p.id}')">✎ Edit</button>
+        <button class="btn btn-ghost-r btn-xs" onclick="deleteProduct('${p.id}')">✕</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+async function saveProduct() {
+  const name=document.getElementById('pf-name').value.trim();
+  const dept=document.getElementById('pf-dept').value;
+  const price=parseFloat(document.getElementById('pf-price').value);
+  if (!name) { toast('Enter product name','err'); return; }
+  if (!dept) { toast('Select department','err'); return; }
+  if (isNaN(price)||price<0) { toast('Enter valid price','err'); return; }
+  if (pfEditId) {
+    const idx=products.findIndex(p=>p.id===pfEditId);
+    if (idx>=0) { products[idx]={...products[idx],name,dept,price}; await dbPut('products',products[idx]); }
+    toast(`Updated: ${name}`,'ok'); cancelPf();
+  } else {
+    const dup=products.find(p=>p.name.toLowerCase()===name.toLowerCase()&&p.dept===dept);
+    if (dup) { toast('Already exists in this dept','err'); return; }
+    const prod={id:`p_${Date.now()}`,name,dept,price};
+    products.push(prod); await dbPut('products',prod);
+    toast(`Added: ${name}`,'ok');
+    document.getElementById('pf-name').value='';
+    document.getElementById('pf-price').value='';
+    document.getElementById('pf-name').focus();
+  }
+  renderInventory(); renderDepts(document.getElementById('dept-search').value);
+}
+
+function editProduct(id) {
+  const p=products.find(x=>x.id===id); if (!p) return;
+  pfEditId=id;
+  document.getElementById('pf-name').value=p.name;
+  document.getElementById('pf-dept').value=p.dept;
+  document.getElementById('pf-price').value=p.price.toFixed(2);
+  document.getElementById('inv-form-title').textContent=`Editing: ${p.name}`;
+  document.getElementById('pf-save').textContent='Update';
+  document.getElementById('pf-cancel').style.display='inline-flex';
+  document.getElementById('pf-name').focus();
+}
+
+function cancelPf() {
+  pfEditId=null;
+  document.getElementById('pf-name').value='';
+  document.getElementById('pf-dept').value=departments[0]||'';
+  document.getElementById('pf-price').value='';
+  document.getElementById('inv-form-title').textContent='Add New Product';
+  document.getElementById('pf-save').textContent='Save';
+  document.getElementById('pf-cancel').style.display='none';
+  document.getElementById('pf-name').focus();
+}
+
+async function deleteProduct(id) {
+  const p=products.find(x=>x.id===id); if (!p) return;
+  if (!confirm(`Delete "${p.name}"?`)) return;
+  products=products.filter(x=>x.id!==id);
+  await dbDelete('products',id);
+  renderInventory(); renderDepts(document.getElementById('dept-search').value);
+  toast('Deleted','inf');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INVOICES VIEW
+// ═══════════════════════════════════════════════════════════════
+async function renderInvoiceList() {
+  const q  = document.getElementById('invl-srch').value.toLowerCase();
+  const df = document.getElementById('invl-date').value;
+  let invs = await dbGetAll('invoices');
+  invs.sort((a,b)=>b.date-a.date);
+
+  if (df) {
+    const day = new Date(df); day.setHours(0,0,0,0);
+    const dayEnd = new Date(df); dayEnd.setHours(23,59,59,999);
+    invs = invs.filter(inv => inv.date>=day.getTime() && inv.date<=dayEnd.getTime());
+  }
+  if (q) {
+    invs = invs.filter(inv =>
+      inv.total.toFixed(2).includes(q) ||
+      inv.items.some(i=>i.name.toLowerCase().includes(q)) ||
+      inv.dateStr.includes(q)
+    );
+  }
+
+  document.getElementById('invl-count-lbl').textContent=`${invs.length} invoice${invs.length!==1?'s':''}`;
+  const list=document.getElementById('invl-list');
+  list.innerHTML='';
+  if (!invs.length) {
+    list.innerHTML=`<div style="padding:32px;text-align:center;color:var(--t3);font-size:11px;font-weight:700;letter-spacing:1px">NO INVOICES FOUND</div>`;
+    return;
+  }
+  invs.forEach((inv,i) => {
+    const dt=new Date(inv.date);
+    const row=document.createElement('div');
+    row.className='invl-row'+(inv.id===selectedInvoiceId?' sel':'');
+    row.innerHTML=`
+      <div class="invl-row-top">
+        <span class="invl-row-id">#${inv.id||i+1}</span>
+        <span class="invl-row-amt">Rs ${inv.total.toFixed(2)}</span>
+      </div>
+      <div class="invl-row-date">${dt.toLocaleDateString('en-PK',{weekday:'short',year:'numeric',month:'short',day:'numeric'})} · ${dt.toLocaleTimeString()}</div>
+      <div class="invl-row-items">${inv.items.length} item${inv.items.length!==1?'s':''}: ${inv.items.map(i=>i.name).slice(0,3).join(', ')}${inv.items.length>3?'…':''}</div>`;
+    row.onclick=()=>showInvoiceDetail(inv);
+    list.appendChild(row);
+  });
+}
+
+function showInvoiceDetail(inv) {
+  selectedInvoiceId = inv.id;
+  document.querySelectorAll('.invl-row').forEach(r=>r.classList.remove('sel'));
+  event.currentTarget.classList.add('sel');
+  const dt=new Date(inv.date);
+  const detail=document.getElementById('invl-detail');
+  const itemsHtml=inv.items.map(it=>`
+    <div class="inv-item-row">
+      <div><div class="inv-item-name">${esc(it.name)}</div><div class="inv-item-sub">${esc(it.dept||'')} · ${it.qty} × Rs ${it.price.toFixed(2)}</div></div>
+      <div class="inv-item-tot">Rs ${it.total.toFixed(2)}</div>
+    </div>`).join('');
+
+  let discRow='';
+  if (inv.discPct>0) discRow=`<div class="inv-tot-row"><span class="inv-tot-lbl">Discount (${inv.discPct}%)</span><span class="inv-tot-val" style="color:var(--y)">−Rs ${(inv.subtotal-inv.total).toFixed(2)}</span></div>`;
+
+  detail.innerHTML=`
+    <div class="inv-receipt-card">
+      <div class="inv-rc-head">
+        <div>
+          <div class="inv-rc-id">#${inv.id} · ${dt.toLocaleDateString('en-PK',{weekday:'short',year:'numeric',month:'short',day:'numeric'})} ${dt.toLocaleTimeString()}</div>
+          <div style="font-size:11px;color:var(--t3);margin-top:2px">${inv.items.length} item${inv.items.length!==1?'s':''}</div>
+        </div>
+        <div class="inv-rc-amt">Rs ${inv.total.toFixed(2)}</div>
+      </div>
+      <div class="inv-rc-body">
+        <div class="inv-item-list">${itemsHtml}</div>
+        <div class="inv-totals">
+          <div class="inv-tot-row"><span class="inv-tot-lbl">Subtotal</span><span class="inv-tot-val">Rs ${inv.subtotal.toFixed(2)}</span></div>
+          ${discRow}
+          <div class="inv-tot-row"><span class="inv-tot-lbl" style="font-weight:800;color:var(--t)">Total</span><span class="inv-tot-val green" style="font-size:15px">Rs ${inv.total.toFixed(2)}</span></div>
+          <div class="inv-tot-row"><span class="inv-tot-lbl">Cash</span><span class="inv-tot-val">Rs ${inv.cash.toFixed(2)}</span></div>
+          <div class="inv-tot-row"><span class="inv-tot-lbl">Change</span><span class="inv-tot-val">Rs ${inv.change.toFixed(2)}</span></div>
+        </div>
+      </div>
+      <div class="inv-rc-acts">
+        <button class="btn btn-ghost btn-sm" onclick="printInvDetail(${inv.id})">⎙ Print</button>
+        <button class="btn btn-ghost-r btn-sm" onclick="deleteInvoice(${inv.id})">🗑 Delete</button>
+      </div>
+    </div>`;
+}
+
+async function deleteInvoice(id) {
+  if (!confirm('Delete this invoice?')) return;
+  await dbDelete('invoices', id);
+  toast('Invoice deleted','inf');
+  await loadTodayStats();
+  await renderInvoiceList();
+  document.getElementById('invl-detail').innerHTML=`<div class="inv-detail-empty"><div class="inv-detail-empty-icon">🗂</div><span style="font-size:9px;font-weight:800;letter-spacing:2px;color:var(--t3)">SELECT AN INVOICE</span></div>`;
+}
+
+async function printInvDetail(id) {
+  const invs = await dbGetAll('invoices');
+  const inv = invs.find(i=>i.id===id); if (!inv) return;
+  const dt=new Date(inv.date);
+  let lines='';
+  inv.items.forEach(item=>{
+    lines+=`${(item.dept||'').padEnd(14)} ${item.name}\n  ${item.qty} x Rs${item.price.toFixed(2).padStart(8)} = Rs${item.total.toFixed(2)}\n`;
+  });
+  let dl=''; if(inv.discPct>0) dl=`DISCOUNT (${inv.discPct}%): -Rs ${(inv.subtotal-inv.total).toFixed(2)}\n`;
+  const txt=`==========================\n    MALIK MEDICAL STORE\n==========================\n${dt.toLocaleString()}\n--------------------------\n${lines}--------------------------\nSUBTOTAL  : Rs ${inv.subtotal.toFixed(2)}\n${dl}TOTAL     : Rs ${inv.total.toFixed(2)}\nCASH      : Rs ${inv.cash.toFixed(2)}\nCHANGE    : Rs ${inv.change.toFixed(2)}\n==========================\n        THANK YOU!\n==========================`;
+  const w=window.open('','_blank');
+  w.document.write(`<html><head><title>Invoice</title><style>body{font-family:monospace;white-space:pre-wrap;padding:20px;font-size:13px;line-height:1.6}</style></head><body>${esc(txt)}</body></html>`);
+  w.document.close(); setTimeout(()=>{w.print();w.close();},200);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REPORTS
+// ═══════════════════════════════════════════════════════════════
+async function quickReport(range) {
+  const now=new Date(); let start, end=new Date(now);
+  if (range==='today') { start=new Date(now); start.setHours(0,0,0,0); end.setHours(23,59,59,999); }
+  else if (range==='week') { start=new Date(now); start.setDate(now.getDate()-now.getDay()); start.setHours(0,0,0,0); end.setHours(23,59,59,999); }
+  else if (range==='month') { start=new Date(now.getFullYear(),now.getMonth(),1,0,0,0,0); end.setHours(23,59,59,999); }
+  else { start=new Date(0); end=new Date(); }
+  const labels={today:'TODAY',week:'THIS WEEK',month:'THIS MONTH',all:'ALL TIME'};
+  const all=await dbGetAll('invoices');
+  const invs = range==='all' ? all : all.filter(i=>i.date>=start.getTime()&&i.date<=end.getTime());
+  buildReport(invs,labels[range],start.toLocaleDateString(),end.toLocaleDateString());
+}
+
+async function customReport() {
+  const s=document.getElementById('rep-start').value, e=document.getElementById('rep-end').value;
+  if (!s||!e) { toast('Select both dates','err'); return; }
+  const start=new Date(s), end=new Date(e);
+  if (start>end) { toast('Start must be before end','err'); return; }
+  const all=await dbGetAll('invoices');
+  const invs=all.filter(i=>i.date>=start.getTime()&&i.date<=end.getTime());
+  buildReport(invs,'CUSTOM RANGE',start.toLocaleString(),end.toLocaleString());
+}
+
+function buildReport(invs, title, from, to) {
+  let totalSales=0, totalCash=0, totalDisc=0; const deptTotals={};
+  invs.forEach(inv=>{
+    totalSales+=inv.total; totalCash+=inv.cash; totalDisc+=(inv.subtotal-inv.total);
+    inv.items.forEach(item=>{ deptTotals[item.dept]=(deptTotals[item.dept]||0)+item.total; });
+  });
+  const avg=invs.length?totalSales/invs.length:0;
+  const deptLines=Object.entries(deptTotals).sort((a,b)=>b[1]-a[1]).map(([d,t])=>`${d.padEnd(20)} Rs ${t.toFixed(2)}`).join('\n');
+  const txt=`==========================\n  MALIK MEDICAL STORE\n  ${title}\n==========================\nPeriod  : ${from} → ${to}\nPrinted : ${new Date().toLocaleString()}\n--------------------------\nTRANSACTIONS : ${invs.length}\nTOTAL SALES  : Rs ${totalSales.toFixed(2)}\nTOTAL CASH   : Rs ${totalCash.toFixed(2)}\nDISCOUNTS    : Rs ${totalDisc.toFixed(2)}\nAVG SALE     : Rs ${avg.toFixed(2)}\n--------------------------\nSALES BY DEPARTMENT:\n${deptLines||'  (no data)'}\n==========================\n       END OF REPORT\n==========================`;
+  document.getElementById('rep-output').textContent=txt;
+  const cards=document.getElementById('stat-grid');
+  cards.style.display='grid';
+  cards.innerHTML=`
+    <div class="stat-card"><div class="sc-lbl">Total Sales</div><div class="sc-val">Rs ${Math.round(totalSales).toLocaleString()}</div></div>
+    <div class="stat-card"><div class="sc-lbl">Transactions</div><div class="sc-val blue">${invs.length}</div></div>
+    <div class="stat-card"><div class="sc-lbl">Avg Sale</div><div class="sc-val wh">Rs ${Math.round(avg).toLocaleString()}</div></div>
+    <div class="stat-card"><div class="sc-lbl">Discounts</div><div class="sc-val yel">Rs ${Math.round(totalDisc).toLocaleString()}</div></div>`;
+}
+
+function printReport() {
+  const txt=document.getElementById('rep-output').textContent;
+  const w=window.open('','_blank');
+  w.document.write(`<html><head><title>Report</title><style>body{font-family:monospace;white-space:pre-wrap;padding:20px;font-size:12px;line-height:1.6}</style></head><body>${esc(txt)}</body></html>`);
+  w.document.close(); setTimeout(()=>{w.print();w.close();},200);
+}
+function dlReport() { dlBlob(document.getElementById('rep-output').textContent,'text/plain',`Malik-Report-${new Date().toISOString().slice(0,10)}.txt`); toast('Downloaded','ok'); }
+
+// ═══════════════════════════════════════════════════════════════
+// TODAY STATS
+// ═══════════════════════════════════════════════════════════════
+async function loadTodayStats() {
+  const start=new Date(); start.setHours(0,0,0,0);
+  const end=new Date(); end.setHours(23,59,59,999);
+  const all=await dbGetAll('invoices');
+  const today=all.filter(i=>i.date>=start.getTime()&&i.date<=end.getTime());
+  const total=today.reduce((s,i)=>s+i.total,0);
+  document.getElementById('tb-sales').textContent=`Rs ${total.toFixed(2)}`;
+  document.getElementById('tb-txns').textContent=today.length;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DATA VIEW
+// ═══════════════════════════════════════════════════════════════
+async function refreshDataView() {
+  const invCount=await dbCount('invoices');
+  document.getElementById('db-inv-count').textContent=`${invCount} record${invCount!==1?'s':''}`;
+  document.getElementById('db-prod-count').textContent=`${products.length} product${products.length!==1?'s':''}`;
+  document.getElementById('db-dept-count').textContent=departments.length;
+  document.getElementById('db-dept-body').innerHTML=`
+    <p class="db-desc" style="margin-bottom:8px">Right-click departments in Register to rename or delete.</p>
+    <div style="max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
+      ${departments.map(d=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--s2);border-radius:6px;border:1px solid var(--bd)"><span style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${esc(d)}</span><span style="font-family:var(--mono);font-size:9px;color:var(--t3);flex-shrink:0;margin-left:8px">${products.filter(p=>p.dept===d).length} products</span></div>`).join('')}
+    </div>`;
+  document.getElementById('db-session-body').innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:7px">
+      ${[['Session Sales',`Rs ${sessionSales.toFixed(2)}`,`color:var(--g)`],['Transactions',sessionTxns,`color:var(--b)`],['Products in DB',products.length,`color:var(--t2)`],['Departments',departments.length,`color:var(--t2)`]].map(([l,v,c])=>`<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:var(--t3);font-weight:600">${l}</span><span style="font-family:var(--mono);font-size:12px;font-weight:700;${c}">${v}</span></div>`).join('')}
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORT / IMPORT
+// ═══════════════════════════════════════════════════════════════
+async function exportCSV() {
+  const invs=await dbGetAll('invoices');
+  if (!invs.length) { toast('No invoice data','err'); return; }
+  const DELIM='|';
+  let csv=`Timestamp${DELIM}Depts${DELIM}Items${DELIM}Qtys${DELIM}Prices${DELIM}Subtotal${DELIM}Total${DELIM}Cash${DELIM}Change${DELIM}DiscPct\n`;
+  invs.sort((a,b)=>a.date-b.date).forEach(inv=>{
+    csv+=[inv.dateStr,inv.items.map(i=>i.dept).join(';'),inv.items.map(i=>i.name.replace(/[|;]/g,' ')).join(';'),inv.items.map(i=>i.qty).join(';'),inv.items.map(i=>i.price.toFixed(2)).join(';'),inv.subtotal.toFixed(2),inv.total.toFixed(2),inv.cash.toFixed(2),inv.change.toFixed(2),inv.discPct].join(DELIM)+'\n';
+  });
+  dlBlob(csv,'text/csv',`malik_invoices_${new Date().toISOString().slice(0,10)}.csv`);
+  toast(`Exported ${invs.length} invoices`,'ok');
+}
+
+async function importCSV(e) {
+  const file=e.target.files[0]; if (!file) return;
+  const r=new FileReader();
+  r.onload=async ev=>{
+    const c=ev.target.result;
+    if (!c.includes('Timestamp')) { toast('Invalid CSV','err'); return; }
+    const rows=c.split('\n').slice(1); let count=0;
+    for (const row of rows) {
+      if (!row.trim()) continue;
+      const p=row.split('|'); if (p.length<9) continue;
+      const [ts,depts,items,qtys,prices,sub,total,cash,change,discPct]=p;
+      const dArr=depts.split(';'),nArr=items.split(';'),qArr=qtys.split(';').map(Number),prArr=prices.split(';').map(Number);
+      await dbAdd('invoices',{date:new Date(ts).getTime(),dateStr:ts,items:nArr.map((name,i)=>({name,dept:dArr[i]||'?',qty:qArr[i],price:prArr[i],total:qArr[i]*prArr[i]})),subtotal:parseFloat(sub),total:parseFloat(total),cash:parseFloat(cash),change:parseFloat(change),discPct:parseFloat(discPct||0)}).catch(()=>{});
+      count++;
+    }
+    await loadTodayStats(); toast(`Imported ${count} invoices`,'ok');
+  };
+  r.readAsText(file); e.target.value='';
+}
+
+async function clearInvoices() {
+  if (!confirm('Delete ALL invoice data? Cannot be undone.')) return;
+  await dbClear('invoices'); await loadTodayStats();
+  toast('All invoices cleared','inf'); refreshDataView();
+}
+
+function exportProducts() { dlBlob(JSON.stringify(products,null,2),'application/json',`malik_products_${new Date().toISOString().slice(0,10)}.json`); toast('Products exported','ok'); }
+
+async function importProducts(e) {
+  const file=e.target.files[0]; if (!file) return;
+  const r=new FileReader();
+  r.onload=async ev=>{
+    try {
+      const data=JSON.parse(ev.target.result);
+      if (!Array.isArray(data)) { toast('Invalid JSON','err'); return; }
+      for (const p of data) await dbPut('products',p).catch(()=>{});
+      products=await dbGetAll('products');
+      renderInventory(); renderDepts();
+      toast(`Imported ${data.length} products`,'ok'); refreshDataView();
+    } catch { toast('Parse error','err'); }
+  };
+  r.readAsText(file); e.target.value='';
+}
+
+async function clearProducts() {
+  if (!confirm('Delete ALL products?')) return;
+  await dbClear('products'); products=[];
+  renderInventory(); renderDepts();
+  toast('Products cleared','inf'); refreshDataView();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════════
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function dlBlob(content,type,name){const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
+function toast(msg,type='inf'){const w=document.getElementById('toasts');const el=document.createElement('div');el.className=`toast ${type}`;el.textContent=msg;w.appendChild(el);setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),300)},2400)}
+
+// ═══════════════════════════════════════════════════════════════
+// GLOBAL KEYBOARD
+// ═══════════════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.shiftKey && e.key==='Enter') { e.preventDefault(); completeCheckout(); }
+  else if (e.ctrlKey && e.shiftKey && e.key==='P') { e.preventDefault(); printReceipt(); }
+  else if (e.key==='F2') { e.preventDefault(); newSale(); }
+  else if (e.key==='F5') { e.preventDefault(); switchTab('inv'); }
+  else if (e.key==='F6') { e.preventDefault(); switchTab('invl'); }
+  else if (e.key==='F7') { e.preventDefault(); switchTab('rep'); }
+});
+
+init();
+</script>
+</body>
+</html>
