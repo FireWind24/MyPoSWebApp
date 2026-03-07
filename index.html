@@ -1065,6 +1065,8 @@ async function onAuthSuccess() {
   hideAuthScreen();
   document.getElementById('tb-user-email').textContent = currentUser.email;
   document.getElementById('tb-user-wrap').style.display = 'flex';
+  // Small delay — let Supabase client fully propagate the JWT before any DB calls
+  await new Promise(r => setTimeout(r, 300));
   await loadUserData();
 }
 
@@ -1073,11 +1075,10 @@ async function loadUserData() {
     const cfgDepts = await dbGet('config', 'departments');
     if (cfgDepts && Array.isArray(cfgDepts.value) && cfgDepts.value.length > 0) {
       departments = cfgDepts.value;
-    } else {
-      saveDepts(); // first time — save defaults for this user
     }
-  } catch(e) {}
-  try { products = (await dbGetAll('products')) || []; } catch(e) {}
+    // Don't save on first load — only save when user explicitly changes departments
+  } catch(e) { console.warn('loadUserData depts:', e.message); }
+  try { products = (await dbGetAll('products')) || []; } catch(e) { console.warn('loadUserData products:', e.message); }
   renderDepts(); syncInvSelects();
   await loadTodayStats();
   document.getElementById('item-search').focus();
