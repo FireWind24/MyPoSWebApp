@@ -42,6 +42,7 @@ button,input,select{font-family:inherit}
 
 /* ── SHELL ── */
 .app{display:grid;grid-template-rows:48px 1fr;height:100vh;width:100vw}
+.app > *:last-child{min-height:0}
 
 /* ── TOPBAR ── */
 .topbar{
@@ -85,7 +86,7 @@ button,input,select{font-family:inherit}
 .tb-date{font-size:9px;color:var(--t3);letter-spacing:1px;margin-top:1px}
 
 /* ── VIEWS ── */
-.view{display:none;height:100%}
+.view{display:none;height:100%;min-height:0}
 .view.active{display:flex}
 
 /* ── POS VIEW — 3-PANEL ── */
@@ -93,7 +94,7 @@ button,input,select{font-family:inherit}
 #pos-view.active{display:grid}
 
 /* ── PANELS ── */
-.panel{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--bd)}
+.panel{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--bd);min-height:0}
 .panel:last-child{border-right:none}
 .ph{
   padding:11px 16px;background:var(--s2);border-bottom:1px solid var(--bd);
@@ -101,7 +102,7 @@ button,input,select{font-family:inherit}
   min-height:44px;
 }
 .ph-title{font-size:9px;font-weight:800;letter-spacing:2.5px;color:var(--t3);text-transform:uppercase}
-.panel-scroll{flex:1;overflow-y:auto;overflow-x:hidden}
+.panel-scroll{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0}
 .pfoot{background:var(--s2);border-top:1px solid var(--bd);padding:10px 12px;flex-shrink:0}
 
 /* ── DEPT PANEL ── */
@@ -280,8 +281,8 @@ button,input,select{font-family:inherit}
 kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2px 6px;font-size:9px;font-family:var(--mono);color:var(--t2)}
 
 /* ── CART PANEL ── */
-#cart-panel{background:var(--s1);overflow-y:auto}
-.cart-list{flex:1;overflow-y:auto}
+#cart-panel{background:var(--s1);display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.cart-list{flex:1;overflow-y:auto;min-height:0}
 .cart-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;height:100%;min-height:140px;color:var(--t3)}
 .cart-empty-icon{font-size:36px;opacity:.15}
 .cart-empty-txt{font-size:9px;font-weight:800;letter-spacing:3px;text-transform:uppercase}
@@ -387,7 +388,7 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
 .td-acts{display:flex;gap:5px;justify-content:flex-end}
 
 /* ── INVOICES ── */
-#invl-view{flex-direction:column;height:100%}
+#invl-view{flex-direction:column;height:100%;min-height:0}
 #invl-view.active{display:flex}
 .invl-toolbar{padding:10px 20px;background:var(--s1);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px;flex-shrink:0}
 .invl-srch{flex:1;max-width:320px;background:var(--s2);border:1px solid var(--bd);border-radius:var(--rad);padding:8px 12px;color:var(--t);font-size:13px;outline:none;transition:border-color var(--trs)}
@@ -396,9 +397,9 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
 .invl-date{background:var(--s2);border:1px solid var(--bd);border-radius:var(--rad);padding:8px 10px;color:var(--t);font-family:var(--mono);font-size:11px;outline:none;transition:border-color var(--trs)}
 .invl-date:focus{border-color:var(--b)}
 
-.invl-layout{flex:1;display:grid;grid-template-columns:360px 1fr;overflow:hidden}
-.invl-list{border-right:1px solid var(--bd);overflow-y:auto;background:var(--s1)}
-.invl-detail{overflow-y:auto;padding:20px;background:var(--bg)}
+.invl-layout{flex:1;display:grid;grid-template-columns:360px 1fr;overflow:hidden;min-height:0}
+.invl-list{border-right:1px solid var(--bd);overflow-y:auto;background:var(--s1);height:100%}
+.invl-detail{overflow-y:auto;padding:20px;background:var(--bg);height:100%}
 
 .invl-row{
   padding:12px 16px;border-bottom:1px solid rgba(30,45,69,.5);
@@ -834,6 +835,13 @@ async function dbCount(store) {
   } catch(e) { return 0; }
 }
 // ═══════════════════════════════════════════════════════════════
+// HELPERS  (safe number + date coercion for Supabase data)
+// ═══════════════════════════════════════════════════════════════
+function n2(v)   { return (parseFloat(v)||0).toFixed(2); }        // safe 2dp string
+function n0(v)   { return parseFloat(v)||0; }                      // safe float
+function toMs(v) { return typeof v==='number'?v:new Date(v||0).getTime(); } // robust timestamp
+
+// ═══════════════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════════════
 let cart = [], cartTotal = 0, currentDept = '';
@@ -1005,11 +1013,22 @@ async function ctxRename() {
 async function ctxDelete() {
   if (ctxDeptIdx<0) return;
   const name = departments[ctxDeptIdx];
-  if (!confirm(`Delete "${name}"?`)) { closeCtx(); return; }
-  departments.splice(ctxDeptIdx,1); await saveDepts();
+  const orphans = products.filter(p => p.dept === name);
+  const msg = orphans.length
+    ? `Delete "${name}"?\n\n${orphans.length} product(s) will be moved to "UNCATEGORIZED".`
+    : `Delete "${name}"?`;
+  if (!confirm(msg)) { closeCtx(); return; }
+  if (orphans.length) {
+    if (!departments.includes('UNCATEGORIZED')) departments.push('UNCATEGORIZED');
+    products = products.map(p => p.dept === name ? {...p, dept:'UNCATEGORIZED'} : p);
+    orphans.forEach(p => dbPut('products', {...p, dept:'UNCATEGORIZED'}).catch(()=>{}));
+  }
+  departments.splice(ctxDeptIdx,1);
+  await saveDepts();
   if (currentDept===name) currentDept='';
-  renderDepts(); syncInvSelects();
-  closeCtx(); toast('Deleted','inf');
+  renderDepts(); syncInvSelects(); renderInventory();
+  closeCtx();
+  toast('Deleted' + (orphans.length ? ' — ' + orphans.length + ' products moved to UNCATEGORIZED' : ''), 'inf');
 }
 function handleDeptSearchKey(e) {
   if (e.key==='Enter') { e.preventDefault(); document.querySelector('#dept-list .dept-item')?.click(); }
@@ -1255,8 +1274,11 @@ async function completeCheckout() {
     subtotal: cartTotal, total: final,
     cash: cashReceived, change, discPct
   };
-  await dbAdd('invoices', inv);
-  await loadTodayStats();
+  // Fire-and-forget — never block UI on network
+  dbAdd('invoices', inv).then(saved => {
+    if (saved && saved.id) inv.id = saved.id;
+    loadTodayStats();
+  }).catch(e => console.error('Invoice save failed:', e.message));
 
   buildReceipt(final, change, discPct);
   document.getElementById('receipt-bar').classList.add('show');
@@ -1264,7 +1286,9 @@ async function completeCheckout() {
   document.getElementById('receipt-body').classList.add('open');
   document.getElementById('receipt-toggle-btn').textContent = '▲ Hide';
   document.getElementById('reg-scroll').scrollTop = 0;
-  setTimeout(() => document.getElementById('receipt-bar').scrollIntoView({behavior:'smooth',block:'nearest'}), 80);
+  // Scroll cart panel to bottom so receipt is visible (avoid scrollIntoView layout thrash)
+  const _cp = document.getElementById('cart-panel');
+  setTimeout(() => { _cp.scrollTop = _cp.scrollHeight; }, 80);
   setStatus('✓ Sale complete! Change: Rs '+change.toFixed(2),'ok');
   toast('Change: Rs '+change.toFixed(2),'ok');
 }
@@ -1408,7 +1432,7 @@ function renderInventory() {
       <td style="color:var(--t3);font-family:var(--mono);font-size:10px">${i+1}</td>
       <td class="td-name">${esc(p.name)}</td>
       <td><span class="td-dept-tag">${esc(p.dept)}</span></td>
-      <td class="td-price">Rs ${p.price.toFixed(2)}</td>
+      <td class="td-price">Rs ${n2(p.price)}</td>
       <td class="td-acts">
         <button class="btn btn-ghost btn-xs" onclick="editProduct('${p.id}')">✎ Edit</button>
         <button class="btn btn-ghost-r btn-xs" onclick="deleteProduct('${p.id}')">✕</button>
@@ -1446,7 +1470,7 @@ function editProduct(id) {
   pfEditId=id;
   document.getElementById('pf-name').value=p.name;
   document.getElementById('pf-dept').value=p.dept;
-  document.getElementById('pf-price').value=p.price.toFixed(2);
+  document.getElementById('pf-price').value=n2(p.price);
   document.getElementById('inv-form-title').textContent=`Editing: ${p.name}`;
   document.getElementById('pf-save').textContent='Update';
   document.getElementById('pf-cancel').style.display='inline-flex';
@@ -1456,7 +1480,7 @@ function editProduct(id) {
 function cancelPf() {
   pfEditId=null;
   document.getElementById('pf-name').value='';
-  document.getElementById('pf-dept').value=departments[0]||'';
+  document.getElementById('pf-dept').value=[...departments].sort((a,b)=>a.localeCompare(b))[0]||'';
   document.getElementById('pf-price').value='';
   document.getElementById('inv-form-title').textContent='Add New Product';
   document.getElementById('pf-save').textContent='Save';
@@ -1480,18 +1504,18 @@ async function renderInvoiceList() {
   const q  = document.getElementById('invl-srch').value.toLowerCase();
   const df = document.getElementById('invl-date').value;
   let invs = await dbGetAll('invoices');
-  invs.sort((a,b)=>b.date-a.date);
+  invs.sort((a,b)=>toMs(b.date)-toMs(a.date));
 
   if (df) {
     const day = new Date(df); day.setHours(0,0,0,0);
     const dayEnd = new Date(df); dayEnd.setHours(23,59,59,999);
-    invs = invs.filter(inv => inv.date>=day.getTime() && inv.date<=dayEnd.getTime());
+    invs = invs.filter(inv => { const d=toMs(inv.date); return d>=day.getTime()&&d<=dayEnd.getTime(); });
   }
   if (q) {
     invs = invs.filter(inv =>
-      inv.total.toFixed(2).includes(q) ||
-      inv.items.some(i=>i.name.toLowerCase().includes(q)) ||
-      inv.dateStr.includes(q)
+      n2(inv.total).includes(q) ||
+      (inv.items||[]).some(i=>i&&i.name&&i.name.toLowerCase().includes(q)) ||
+      (inv.dateStr||'').includes(q)
     );
   }
 
@@ -1503,16 +1527,17 @@ async function renderInvoiceList() {
     return;
   }
   invs.forEach((inv,i) => {
-    const dt=new Date(inv.date);
+    const dt=new Date(toMs(inv.date));
+    const _items=inv.items||[];
     const row=document.createElement('div');
-    row.className='invl-row'+(inv.id===selectedInvoiceId?' sel':'');
+    row.className='invl-row'+(String(inv.id)===String(selectedInvoiceId)?' sel':'');
     row.innerHTML=`
       <div class="invl-row-top">
         <span class="invl-row-id">#${inv.id||i+1}</span>
-        <span class="invl-row-amt">Rs ${inv.total.toFixed(2)}</span>
+        <span class="invl-row-amt">Rs ${n2(inv.total)}</span>
       </div>
       <div class="invl-row-date">${dt.toLocaleDateString('en-PK',{weekday:'short',year:'numeric',month:'short',day:'numeric'})} · ${dt.toLocaleTimeString()}</div>
-      <div class="invl-row-items">${inv.items.length} item${inv.items.length!==1?'s':''}: ${inv.items.map(i=>i.name).slice(0,3).join(', ')}${inv.items.length>3?'…':''}</div>`;
+      <div class="invl-row-items">${_items.length} item${_items.length!==1?'s':''}: ${_items.map(i=>i.name).slice(0,3).join(', ')}${_items.length>3?'…':''}</div>`;
     row.onclick=(e)=>showInvoiceDetail(inv,e.currentTarget);
     list.appendChild(row);
   });
@@ -1522,34 +1547,36 @@ function showInvoiceDetail(inv, rowEl) {
   selectedInvoiceId = inv.id;
   document.querySelectorAll('.invl-row').forEach(r=>r.classList.remove('sel'));
   if (rowEl) rowEl.classList.add('sel');
-  const dt=new Date(inv.date);
+  const dt=new Date(toMs(inv.date));
+  const _its=inv.items||[];
   const detail=document.getElementById('invl-detail');
-  const itemsHtml=inv.items.map(it=>`
+  const itemsHtml=_its.map(it=>`
     <div class="inv-item-row">
-      <div><div class="inv-item-name">${esc(it.name)}</div><div class="inv-item-sub">${esc(it.dept||'')} · ${it.qty} × Rs ${it.price.toFixed(2)}</div></div>
-      <div class="inv-item-tot">Rs ${it.total.toFixed(2)}</div>
+      <div><div class="inv-item-name">${esc(it.name||'')}</div><div class="inv-item-sub">${esc(it.dept||'')} · ${it.qty||0} × Rs ${n2(it.price)}</div></div>
+      <div class="inv-item-tot">Rs ${n2(it.total)}</div>
     </div>`).join('');
 
+  const _sub=n0(inv.subtotal),_tot=n0(inv.total),_disc=n0(inv.discPct);
   let discRow='';
-  if (inv.discPct>0) discRow=`<div class="inv-tot-row"><span class="inv-tot-lbl">Discount (${inv.discPct}%)</span><span class="inv-tot-val" style="color:var(--y)">−Rs ${(inv.subtotal-inv.total).toFixed(2)}</span></div>`;
+  if (_disc>0) discRow=`<div class="inv-tot-row"><span class="inv-tot-lbl">Discount (${_disc}%)</span><span class="inv-tot-val" style="color:var(--y)">−Rs ${(_sub-_tot).toFixed(2)}</span></div>`;
 
   detail.innerHTML=`
     <div class="inv-receipt-card">
       <div class="inv-rc-head">
         <div>
           <div class="inv-rc-id">#${inv.id} · ${dt.toLocaleDateString('en-PK',{weekday:'short',year:'numeric',month:'short',day:'numeric'})} ${dt.toLocaleTimeString()}</div>
-          <div style="font-size:11px;color:var(--t3);margin-top:2px">${inv.items.length} item${inv.items.length!==1?'s':''}</div>
+          <div style="font-size:11px;color:var(--t3);margin-top:2px">${_its.length} item${_its.length!==1?'s':''}</div>
         </div>
-        <div class="inv-rc-amt">Rs ${inv.total.toFixed(2)}</div>
+        <div class="inv-rc-amt">Rs ${n2(inv.total)}</div>
       </div>
       <div class="inv-rc-body">
         <div class="inv-item-list">${itemsHtml}</div>
         <div class="inv-totals">
-          <div class="inv-tot-row"><span class="inv-tot-lbl">Subtotal</span><span class="inv-tot-val">Rs ${inv.subtotal.toFixed(2)}</span></div>
+          <div class="inv-tot-row"><span class="inv-tot-lbl">Subtotal</span><span class="inv-tot-val">Rs ${n2(inv.subtotal)}</span></div>
           ${discRow}
-          <div class="inv-tot-row"><span class="inv-tot-lbl" style="font-weight:800;color:var(--t)">Total</span><span class="inv-tot-val green" style="font-size:15px">Rs ${inv.total.toFixed(2)}</span></div>
-          <div class="inv-tot-row"><span class="inv-tot-lbl">Cash</span><span class="inv-tot-val">Rs ${inv.cash.toFixed(2)}</span></div>
-          <div class="inv-tot-row"><span class="inv-tot-lbl">Change</span><span class="inv-tot-val">Rs ${inv.change.toFixed(2)}</span></div>
+          <div class="inv-tot-row"><span class="inv-tot-lbl" style="font-weight:800;color:var(--t)">Total</span><span class="inv-tot-val green" style="font-size:15px">Rs ${n2(inv.total)}</span></div>
+          <div class="inv-tot-row"><span class="inv-tot-lbl">Cash</span><span class="inv-tot-val">Rs ${n2(inv.cash)}</span></div>
+          <div class="inv-tot-row"><span class="inv-tot-lbl">Change</span><span class="inv-tot-val">Rs ${n2(inv.change)}</span></div>
         </div>
       </div>
       <div class="inv-rc-acts">
@@ -1562,6 +1589,7 @@ function showInvoiceDetail(inv, rowEl) {
 async function deleteInvoice(id) {
   if (!confirm('Delete this invoice?')) return;
   await dbDelete('invoices', id);
+  selectedInvoiceId = null;
   toast('Invoice deleted','inf');
   await loadTodayStats();
   await renderInvoiceList();
@@ -1570,14 +1598,14 @@ async function deleteInvoice(id) {
 
 async function printInvDetail(id) {
   const invs = await dbGetAll('invoices');
-  const inv = invs.find(i=>i.id===id); if (!inv) return;
-  const dt=new Date(inv.date);
+  const inv = invs.find(i=>String(i.id)===String(id)); if (!inv) return;
+  const dt=new Date(toMs(inv.date));
   let lines='';
-  inv.items.forEach(item=>{
-    lines+=`${(item.dept||'').padEnd(14)} ${item.name}\n  ${item.qty} x Rs${item.price.toFixed(2).padStart(8)} = Rs${item.total.toFixed(2)}\n`;
+  (inv.items||[]).forEach(item=>{
+    lines+=`${(item.dept||'').padEnd(14)} ${item.name||''}\n  ${item.qty||0} x Rs${n2(item.price).padStart(8)} = Rs${n2(item.total)}\n`;
   });
-  let dl=''; if(inv.discPct>0) dl=`DISCOUNT (${inv.discPct}%): -Rs ${(inv.subtotal-inv.total).toFixed(2)}\n`;
-  const txt=`==========================\n    MALIK MEDICAL STORE\n==========================\n${dt.toLocaleString()}\n--------------------------\n${lines}--------------------------\nSUBTOTAL  : Rs ${inv.subtotal.toFixed(2)}\n${dl}TOTAL     : Rs ${inv.total.toFixed(2)}\nCASH      : Rs ${inv.cash.toFixed(2)}\nCHANGE    : Rs ${inv.change.toFixed(2)}\n==========================\n        THANK YOU!\n==========================`;
+  let dl=''; if(n0(inv.discPct)>0) dl=`DISCOUNT (${inv.discPct}%): -Rs ${(n0(inv.subtotal)-n0(inv.total)).toFixed(2)}\n`;
+  const txt=`==========================\n    MALIK MEDICAL STORE\n==========================\n${dt.toLocaleString()}\n--------------------------\n${lines}--------------------------\nSUBTOTAL  : Rs ${n2(inv.subtotal)}\n${dl}TOTAL     : Rs ${n2(inv.total)}\nCASH      : Rs ${n2(inv.cash)}\nCHANGE    : Rs ${n2(inv.change)}\n==========================\n        THANK YOU!\n==========================`;
   const w=window.open('','_blank');
   w.document.write(`<html><head><title>Invoice</title><style>body{font-family:monospace;white-space:pre-wrap;padding:20px;font-size:13px;line-height:1.6}</style></head><body>${esc(txt)}</body></html>`);
   w.document.close(); setTimeout(()=>{w.print();w.close();},200);
@@ -1594,7 +1622,7 @@ async function quickReport(range) {
   else { start=new Date(0); end=new Date(); }
   const labels={today:'TODAY',week:'THIS WEEK',month:'THIS MONTH',all:'ALL TIME'};
   const all=await dbGetAll('invoices');
-  const invs = range==='all' ? all : all.filter(i=>i.date>=start.getTime()&&i.date<=end.getTime());
+  const invs = range==='all' ? all : all.filter(i=>{ const d=toMs(i.date); return d>=start.getTime()&&d<=end.getTime(); });
   buildReport(invs,labels[range],start.toLocaleDateString(),end.toLocaleDateString());
 }
 
@@ -1604,19 +1632,20 @@ async function customReport() {
   const start=new Date(s), end=new Date(e);
   if (start>end) { toast('Start must be before end','err'); return; }
   const all=await dbGetAll('invoices');
-  const invs=all.filter(i=>i.date>=start.getTime()&&i.date<=end.getTime());
+  const invs=all.filter(i=>{ const d=toMs(i.date); return d>=start.getTime()&&d<=end.getTime(); });
   buildReport(invs,'CUSTOM RANGE',start.toLocaleString(),end.toLocaleString());
 }
 
 function buildReport(invs, title, from, to) {
   let totalSales=0, totalCash=0, totalDisc=0; const deptTotals={};
   invs.forEach(inv=>{
-    totalSales+=inv.total; totalCash+=inv.cash; totalDisc+=(inv.subtotal-inv.total);
-    inv.items.forEach(item=>{ deptTotals[item.dept]=(deptTotals[item.dept]||0)+item.total; });
+    const t=n0(inv.total),c=n0(inv.cash),s=n0(inv.subtotal);
+    totalSales+=t; totalCash+=c; totalDisc+=(s-t);
+    (inv.items||[]).forEach(item=>{ const d=item.dept||'?'; deptTotals[d]=(deptTotals[d]||0)+n0(item.total); });
   });
   const avg=invs.length?totalSales/invs.length:0;
-  const deptLines=Object.entries(deptTotals).sort((a,b)=>b[1]-a[1]).map(([d,t])=>`${d.padEnd(20)} Rs ${t.toFixed(2)}`).join('\n');
-  const txt=`==========================\n  MALIK MEDICAL STORE\n  ${title}\n==========================\nPeriod  : ${from} → ${to}\nPrinted : ${new Date().toLocaleString()}\n--------------------------\nTRANSACTIONS : ${invs.length}\nTOTAL SALES  : Rs ${totalSales.toFixed(2)}\nTOTAL CASH   : Rs ${totalCash.toFixed(2)}\nDISCOUNTS    : Rs ${totalDisc.toFixed(2)}\nAVG SALE     : Rs ${avg.toFixed(2)}\n--------------------------\nSALES BY DEPARTMENT:\n${deptLines||'  (no data)'}\n==========================\n       END OF REPORT\n==========================`;
+  const deptLines=Object.entries(deptTotals).sort((a,b)=>b[1]-a[1]).map(([d,t])=>`${d.padEnd(20)} Rs ${n2(t)}`).join('\n');
+  const txt=`==========================\n  MALIK MEDICAL STORE\n  ${title}\n==========================\nPeriod  : ${from} → ${to}\nPrinted : ${new Date().toLocaleString()}\n--------------------------\nTRANSACTIONS : ${invs.length}\nTOTAL SALES  : Rs ${n2(totalSales)}\nTOTAL CASH   : Rs ${n2(totalCash)}\nDISCOUNTS    : Rs ${n2(totalDisc)}\nAVG SALE     : Rs ${n2(avg)}\n--------------------------\nSALES BY DEPARTMENT:\n${deptLines||'  (no data)'}\n==========================\n       END OF REPORT\n==========================`;
   document.getElementById('rep-output').textContent=txt;
   const cards=document.getElementById('stat-grid');
   cards.style.display='grid';
@@ -1644,7 +1673,7 @@ async function loadTodayStats() {
     const end=new Date(); end.setHours(23,59,59,999);
     const all=await dbGetAll('invoices');
     const today=all.filter(i=>{
-      const d=typeof i.date==='number'?i.date:new Date(i.date||i.dateStr).getTime();
+      const d=toMs(i.date);
       return d>=start.getTime()&&d<=end.getTime();
     });
     const total=today.reduce((s,i)=>s+(parseFloat(i.total)||0),0);
@@ -1680,22 +1709,43 @@ async function refreshDataView() {
 
 
 async function quickDeleteDept(name) {
-  if (!confirm('Delete department "' + name + '"?')) return;
+  const orphans = products.filter(p => p.dept === name);
+  const msg = orphans.length
+    ? 'Delete department "' + name + '"?\n\n' + orphans.length + ' product(s) will be moved to "UNCATEGORIZED".'
+    : 'Delete department "' + name + '"?';
+  if (!confirm(msg)) return;
+  // Move orphaned products to UNCATEGORIZED
+  if (orphans.length) {
+    if (!departments.includes('UNCATEGORIZED')) departments.push('UNCATEGORIZED');
+    products = products.map(p => p.dept === name ? {...p, dept:'UNCATEGORIZED'} : p);
+    // Persist each updated product
+    orphans.forEach(p => dbPut('products', {...p, dept:'UNCATEGORIZED'}).catch(()=>{}));
+  }
   departments = departments.filter(d => d !== name);
   if (currentDept === name) currentDept = '';
   saveDepts();
-  renderDepts(); syncInvSelects(); refreshDataView();
-  toast('Deleted: ' + name, 'inf');
+  renderDepts(); syncInvSelects(); renderInventory(); refreshDataView();
+  toast('Deleted: ' + name + (orphans.length ? ' — ' + orphans.length + ' products moved to UNCATEGORIZED' : ''), 'inf');
 }
 
 async function clearAllDepts() {
   if (!departments.length) { toast('No departments to delete','inf'); return; }
-  if (!confirm('Delete ALL ' + departments.length + ' departments? This cannot be undone.')) return;
-  departments = [];
-  currentDept = '';
+  const hasProducts = products.some(p => departments.includes(p.dept));
+  const msg = hasProducts
+    ? 'Delete ALL ' + departments.length + ' departments?\n\nProducts in these departments will be moved to "UNCATEGORIZED".'
+    : 'Delete ALL ' + departments.length + ' departments? This cannot be undone.';
+  if (!confirm(msg)) return;
+  // Move all products to UNCATEGORIZED
+  if (hasProducts) {
+    departments.push('UNCATEGORIZED');
+    products = products.map(p => ({...p, dept:'UNCATEGORIZED'}));
+    products.forEach(p => dbPut('products', p).catch(()=>{}));
+  }
+  departments = departments.filter(d => d === 'UNCATEGORIZED');
+  if (currentDept !== 'UNCATEGORIZED') currentDept = '';
   saveDepts();
-  renderDepts(); syncInvSelects(); refreshDataView();
-  toast('All departments cleared','inf');
+  renderDepts(); syncInvSelects(); renderInventory(); refreshDataView();
+  toast('All departments cleared' + (hasProducts ? ' — products moved to UNCATEGORIZED' : ''), 'inf');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1707,7 +1757,7 @@ async function exportCSV() {
   const DELIM='|';
   let csv=`Timestamp${DELIM}Depts${DELIM}Items${DELIM}Qtys${DELIM}Prices${DELIM}Subtotal${DELIM}Total${DELIM}Cash${DELIM}Change${DELIM}DiscPct\n`;
   invs.sort((a,b)=>a.date-b.date).forEach(inv=>{
-    csv+=[inv.dateStr,inv.items.map(i=>i.dept).join(';'),inv.items.map(i=>i.name.replace(/[|;]/g,' ')).join(';'),inv.items.map(i=>i.qty).join(';'),inv.items.map(i=>i.price.toFixed(2)).join(';'),inv.subtotal.toFixed(2),inv.total.toFixed(2),inv.cash.toFixed(2),inv.change.toFixed(2),inv.discPct].join(DELIM)+'\n';
+    csv+=[(inv.dateStr||new Date(toMs(inv.date)).toISOString()),(inv.items||[]).map(i=>i.dept||'').join(';'),(inv.items||[]).map(i=>(i.name||'').replace(/[|;]/g,' ')).join(';'),(inv.items||[]).map(i=>i.qty||0).join(';'),(inv.items||[]).map(i=>n2(i.price)).join(';'),n2(inv.subtotal),n2(inv.total),n2(inv.cash),n2(inv.change),n0(inv.discPct)].join(DELIM)+'\n';
   });
   dlBlob(csv,'text/csv',`malik_invoices_${new Date().toISOString().slice(0,10)}.csv`);
   toast(`Exported ${invs.length} invoices`,'ok');
