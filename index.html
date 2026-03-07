@@ -522,6 +522,10 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
     <div class="tb-metric"><span class="tb-metric-v" id="tb-sales">Rs 0.00</span><span class="tb-metric-l">Today's Sales</span></div>
     <div class="tb-metric"><span class="tb-metric-v" id="tb-txns">0</span><span class="tb-metric-l">Transactions</span></div>
     <div class="tb-clock-wrap"><div class="tb-time" id="tb-time">00:00:00</div><div class="tb-date" id="tb-date">---</div></div>
+    <div id="tb-user-wrap" style="display:none;align-items:center;gap:0;border-left:1px solid var(--bd);padding:0 16px">
+      <span id="tb-user-email" style="font-size:10px;color:var(--t3);font-family:var(--mono);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <button onclick="authLogout()" style="margin-left:10px;background:none;border:1px solid rgba(240,82,82,.2);color:var(--r);border-radius:5px;padding:3px 9px;font-size:10px;font-weight:700;cursor:pointer;transition:all .13s" onmouseover="this.style.background='var(--rlo)'" onmouseout="this.style.background='none'">Logout</button>
+    </div>
   </div>
 </div>
 
@@ -754,6 +758,105 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
 
 </div><!-- .app -->
 
+<!-- ══ AUTH SCREEN ══ -->
+<style>
+#auth-screen { display:none;position:fixed;inset:0;background:rgba(9,13,20,.97);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(8px) }
+.auth-card { width:400px;background:var(--s1);border:1px solid var(--bd2);border-radius:18px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.8) }
+.auth-logo { padding:28px 28px 20px;text-align:center;border-bottom:1px solid var(--bd) }
+.auth-logo-dot { display:inline-block;width:9px;height:9px;background:var(--g);border-radius:50%;box-shadow:0 0 10px var(--g);margin-right:8px;vertical-align:middle }
+.auth-logo-name { font-size:15px;font-weight:800;letter-spacing:1px;vertical-align:middle }
+.auth-tabs { display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--bd) }
+.auth-tab { padding:11px 0;font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .13s }
+.auth-tab:hover { color:var(--t2) }
+.auth-tab.active { color:var(--g);border-bottom-color:var(--g) }
+.auth-panel { display:none;padding:22px 28px 26px;flex-direction:column;gap:12px }
+.auth-panel.active { display:flex }
+.auth-field { display:flex;flex-direction:column;gap:5px }
+.auth-label { font-size:9px;font-weight:800;letter-spacing:1.5px;color:var(--t3);text-transform:uppercase }
+.auth-inp { background:var(--s3);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;color:var(--t);font-size:13px;outline:none;transition:border-color .13s;font-family:inherit }
+.auth-inp:focus { border-color:var(--b) }
+.auth-err { font-size:11px;min-height:16px;font-weight:600;color:var(--r) }
+.auth-btn-primary { background:var(--g);color:#03120c;font-weight:800;font-size:13px;border:none;border-radius:8px;padding:11px;cursor:pointer;transition:opacity .13s;letter-spacing:.3px;font-family:inherit }
+.auth-btn-primary:hover { opacity:.85 }
+.auth-btn-primary:disabled { opacity:.5;cursor:not-allowed }
+.auth-divider { display:flex;align-items:center;gap:10px;color:var(--t3);font-size:10px;font-weight:700;letter-spacing:1px }
+.auth-divider::before,.auth-divider::after { content:'';flex:1;height:1px;background:var(--bd) }
+.auth-btn-google { display:flex;align-items:center;justify-content:center;gap:9px;background:var(--s2);border:1px solid var(--bd2);border-radius:8px;padding:10px;cursor:pointer;transition:all .13s;color:var(--t);font-size:12px;font-weight:700;font-family:inherit }
+.auth-btn-google:hover { background:var(--s3);border-color:var(--b) }
+.auth-btn-guest { background:transparent;border:1px solid var(--bd);border-radius:8px;padding:10px;cursor:pointer;color:var(--t3);font-size:12px;font-weight:700;transition:all .13s;font-family:inherit }
+.auth-btn-guest:hover { border-color:var(--t3);color:var(--t2) }
+.auth-guest-note { font-size:10px;color:var(--t3);line-height:1.5;text-align:center;padding:10px 14px;background:var(--s2);border-radius:8px;border:1px solid var(--bd) }
+</style>
+
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="auth-logo-dot"></span>
+      <span class="auth-logo-name">MALIK <span style="color:var(--t2);font-weight:400">MEDICAL</span></span>
+      <div style="font-size:11px;color:var(--t3);margin-top:6px">Point of Sale System</div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="authSwitchTab('login')">Log In</button>
+      <button class="auth-tab"        onclick="authSwitchTab('signup')">Sign Up</button>
+      <button class="auth-tab"        onclick="authSwitchTab('guest')">Guest</button>
+    </div>
+
+    <!-- Log In panel -->
+    <div class="auth-panel active" id="auth-panel-login">
+      <div class="auth-field">
+        <label class="auth-label">Email</label>
+        <input class="auth-inp" id="auth-login-email" type="email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label class="auth-label">Password</label>
+        <input class="auth-inp" id="auth-login-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div class="auth-err" id="auth-login-err"></div>
+      <button class="auth-btn-primary" id="auth-login-btn" onclick="authLogin()">Log In</button>
+      <div class="auth-divider">or</div>
+      <button class="auth-btn-google" onclick="authGoogle()">
+        <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Continue with Google
+      </button>
+    </div>
+
+    <!-- Sign Up panel -->
+    <div class="auth-panel" id="auth-panel-signup">
+      <div class="auth-field">
+        <label class="auth-label">Email</label>
+        <input class="auth-inp" id="auth-signup-email" type="email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label class="auth-label">Password</label>
+        <input class="auth-inp" id="auth-signup-pass" type="password" placeholder="Min. 6 characters" autocomplete="new-password">
+      </div>
+      <div class="auth-field">
+        <label class="auth-label">Confirm Password</label>
+        <input class="auth-inp" id="auth-signup-pass2" type="password" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <div class="auth-err" id="auth-signup-err"></div>
+      <button class="auth-btn-primary" id="auth-signup-btn" onclick="authSignUp()">Create Account</button>
+      <div class="auth-divider">or</div>
+      <button class="auth-btn-google" onclick="authGoogle()">
+        <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Continue with Google
+      </button>
+    </div>
+
+    <!-- Guest panel -->
+    <div class="auth-panel" id="auth-panel-guest">
+      <div class="auth-guest-note">
+        Guest mode lets you use the full POS right now — no account needed.<br><br>
+        ⚠️ Your data is <strong style="color:var(--y)">not saved to the cloud</strong>. It lives only in this browser tab. Closing or refreshing the page will clear everything.
+      </div>
+      <button class="auth-btn-guest" onclick="authGuest()">Continue as Guest →</button>
+      <div style="text-align:center;font-size:10px;color:var(--t3)">Want to save your data? <button onclick="authSwitchTab('signup')" style="background:none;border:none;color:var(--b);cursor:pointer;font-size:10px;font-weight:700;padding:0">Create a free account</button></div>
+    </div>
+  </div>
+</div>
+
 <div class="ctx" id="ctx-menu">
   <button onclick="ctxRename()">✎ Rename</button>
   <button onclick="ctxDelete()">✕ Delete</button>
@@ -785,60 +888,198 @@ function openDB() {
   });
 }
 function getPk(store) { return store === 'config' ? 'key' : 'id'; }
+function uid() { return currentUser ? currentUser.id : null; }
 async function dbGet(store, key) {
-  if (!dbClient) return undefined;
+  if (!dbClient || !uid()) return undefined;
   try {
-    const { data, error } = await dbClient.from(store).select('*').eq(getPk(store), String(key)).single();
-    if (error && error.code !== 'PGRST116') console.error('dbGet:', error.message);
+    let q = dbClient.from(store).select('*').eq(getPk(store), String(key)).eq('user_id', uid());
+    const { data, error } = await q.maybeSingle();
+    if (error) console.error('dbGet:', error.message);
     return data || undefined;
   } catch(e) { return undefined; }
 }
 async function dbPut(store, val) {
-  if (!dbClient) return val;
+  if (!dbClient || !uid()) return val;
   try {
-    const { data, error } = await dbClient.from(store).upsert(val).select().single();
+    const { data, error } = await dbClient.from(store).upsert({...val, user_id: uid()}).select().single();
     if (error) { console.error('dbPut:', error.message); toast('Cloud save failed!','err'); }
     return data || val;
   } catch(e) { return val; }
 }
 async function dbAdd(store, val) {
-  if (!dbClient) return val;
+  if (!dbClient || !uid()) return val;
   try {
-    const { data, error } = await dbClient.from(store).insert(val).select().single();
+    const { data, error } = await dbClient.from(store).insert({...val, user_id: uid()}).select().single();
     if (error) { console.error('dbAdd:', error.message); toast('Cloud save failed!','err'); }
     return data || val;
   } catch(e) { return val; }
 }
 async function dbDelete(store, key) {
-  if (!dbClient) return;
+  if (!dbClient || !uid()) return;
   try {
-    const { error } = await dbClient.from(store).delete().eq(getPk(store), String(key));
+    const { error } = await dbClient.from(store).delete().eq(getPk(store), String(key)).eq('user_id', uid());
     if (error) { console.error('dbDelete:', error.message); toast('Cloud delete failed!','err'); }
   } catch(e) {}
 }
 async function dbGetAll(store) {
-  if (!dbClient) return [];
+  if (!dbClient || !uid()) return [];
   try {
-    const { data, error } = await dbClient.from(store).select('*');
+    const { data, error } = await dbClient.from(store).select('*').eq('user_id', uid());
     if (error) { console.error('dbGetAll:', error.message); return []; }
     return data || [];
   } catch(e) { return []; }
 }
 async function dbClear(store) {
-  if (!dbClient) return;
+  if (!dbClient || !uid()) return;
   try {
-    const { error } = await dbClient.from(store).delete().not(getPk(store), 'is', null);
+    const { error } = await dbClient.from(store).delete().eq('user_id', uid());
     if (error) console.error('dbClear:', error.message);
   } catch(e) {}
 }
 async function dbCount(store) {
-  if (!dbClient) return 0;
+  if (!dbClient || !uid()) return 0;
   try {
-    const { count, error } = await dbClient.from(store).select('*', { count: 'exact', head: true });
+    const { count, error } = await dbClient.from(store).select('*', { count: 'exact', head: true }).eq('user_id', uid());
     if (error) console.error('dbCount:', error.message);
     return count || 0;
   } catch(e) { return 0; }
 }
+// ═══════════════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════════════
+let guestMode = false;
+
+function authSwitchTab(tab) {
+  ['login','signup','guest'].forEach(t => {
+    document.getElementById(`auth-panel-${t}`).classList.toggle('active', t===tab);
+    document.querySelectorAll('.auth-tab')[['login','signup','guest'].indexOf(t)].classList.toggle('active', t===tab);
+  });
+  // focus first input
+  const targets = { login:'auth-login-email', signup:'auth-signup-email', guest:null };
+  if (targets[tab]) setTimeout(() => document.getElementById(targets[tab]).focus(), 50);
+}
+
+function authSetErr(panel, msg, type='err') {
+  const el = document.getElementById(`auth-${panel}-err`);
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = type === 'ok' ? 'var(--g)' : 'var(--r)';
+}
+
+function authSetLoading(btnId, loading, label) {
+  const btn = document.getElementById(btnId);
+  btn.disabled = loading;
+  btn.textContent = loading ? '…' : label;
+}
+
+async function authLogin() {
+  if (!dbClient) { authSetErr('login','Not connected to cloud'); return; }
+  const email = document.getElementById('auth-login-email').value.trim();
+  const pass  = document.getElementById('auth-login-pass').value;
+  if (!email || !pass) { authSetErr('login','Enter email and password'); return; }
+  authSetLoading('auth-login-btn', true, 'Log In');
+  const { data, error } = await dbClient.auth.signInWithPassword({ email, password: pass });
+  authSetLoading('auth-login-btn', false, 'Log In');
+  if (error) { authSetErr('login', error.message); return; }
+  currentUser = data.user; guestMode = false;
+  await onAuthSuccess();
+}
+
+async function authSignUp() {
+  if (!dbClient) { authSetErr('signup','Not connected to cloud'); return; }
+  const email = document.getElementById('auth-signup-email').value.trim();
+  const pass  = document.getElementById('auth-signup-pass').value;
+  const pass2 = document.getElementById('auth-signup-pass2').value;
+  if (!email || !pass) { authSetErr('signup','Enter email and password'); return; }
+  if (pass.length < 6)  { authSetErr('signup','Password must be at least 6 characters'); return; }
+  if (pass !== pass2)   { authSetErr('signup','Passwords do not match'); return; }
+  authSetLoading('auth-signup-btn', true, 'Create Account');
+  const { data, error } = await dbClient.auth.signUp({ email, password: pass });
+  authSetLoading('auth-signup-btn', false, 'Create Account');
+  if (error) { authSetErr('signup', error.message); return; }
+  if (data.user && data.session) {
+    currentUser = data.user; guestMode = false;
+    await onAuthSuccess();
+  } else {
+    authSetErr('signup', '✓ Check your email to confirm, then log in.', 'ok');
+    authSwitchTab('login');
+  }
+}
+
+async function authGoogle() {
+  if (!dbClient) { toast('Not connected to cloud','err'); return; }
+  const { error } = await dbClient.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.href }
+  });
+  if (error) toast(error.message, 'err');
+  // Page will redirect to Google and come back — onAuthStateChange handles the rest
+}
+
+function authGuest() {
+  guestMode = true;
+  currentUser = null;
+  hideAuthScreen();
+  // Show guest badge
+  const wrap = document.getElementById('tb-user-wrap');
+  document.getElementById('tb-user-email').textContent = 'Guest';
+  wrap.style.display = 'flex';
+  // Use default departments, no cloud load
+  departments = [...DEFAULT_DEPTS];
+  products = [];
+  renderDepts(); syncInvSelects(); buildQC();
+  loadTodayStats();
+  toast('Guest mode — data is not saved to cloud', 'inf');
+  document.getElementById('item-search').focus();
+}
+
+async function authLogout() {
+  if (guestMode) {
+    // Just reset state and show auth screen
+    guestMode = false;
+    departments = [...DEFAULT_DEPTS]; products = []; cart = []; cartTotal = 0;
+    showAuthScreen(); return;
+  }
+  if (dbClient) await dbClient.auth.signOut();
+  currentUser = null;
+  departments = [...DEFAULT_DEPTS]; products = []; cart = []; cartTotal = 0;
+  showAuthScreen();
+}
+
+async function onAuthSuccess() {
+  hideAuthScreen();
+  document.getElementById('tb-user-email').textContent = currentUser.email;
+  document.getElementById('tb-user-wrap').style.display = 'flex';
+  await loadUserData();
+}
+
+async function loadUserData() {
+  try {
+    const cfgDepts = await dbGet('config', 'departments');
+    if (cfgDepts && Array.isArray(cfgDepts.value) && cfgDepts.value.length > 0) {
+      departments = cfgDepts.value;
+    } else {
+      saveDepts(); // first time — save defaults for this user
+    }
+  } catch(e) {}
+  try { products = (await dbGetAll('products')) || []; } catch(e) {}
+  renderDepts(); syncInvSelects();
+  await loadTodayStats();
+  document.getElementById('item-search').focus();
+}
+
+function showAuthScreen() {
+  document.getElementById('auth-screen').style.display = 'flex';
+  ['auth-login-err','auth-signup-err'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.textContent = '';
+  });
+  document.getElementById('tb-user-wrap').style.display = 'none';
+  authSwitchTab('login');
+}
+function hideAuthScreen() {
+  document.getElementById('auth-screen').style.display = 'none';
+}
+
 // ═══════════════════════════════════════════════════════════════
 // HELPERS  (safe number + date coercion for Supabase data)
 // ═══════════════════════════════════════════════════════════════
@@ -849,6 +1090,7 @@ function toMs(v) { return typeof v==='number'?v:new Date(v||0).getTime(); } // r
 // ═══════════════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════════════
+let currentUser = null; // set after Supabase auth
 let cart = [], cartTotal = 0, currentDept = '';
 let departments = [], products = [];
 let cashReceived = 0, checkoutMode = false;
@@ -892,34 +1134,42 @@ const DEFAULT_DEPTS = [
 ];
 
 async function init() {
-  // Wire up listeners FIRST — buttons always work even if Supabase is slow/down
+  // Wire up listeners FIRST
   document.addEventListener('click', e => { if (!e.target.closest('#ctx-menu')) closeCtx(); });
   document.getElementById('ac-drop').addEventListener('mousedown', e => e.preventDefault());
   document.getElementById('item-search').addEventListener('blur', () => setTimeout(closeAC, 150));
+  document.getElementById('auth-login-pass').addEventListener('keydown', e => { if (e.key==='Enter') authLogin(); });
+  document.getElementById('auth-login-email').addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('auth-login-pass').focus(); });
+  document.getElementById('auth-signup-pass2').addEventListener('keydown', e => { if (e.key==='Enter') authSignUp(); });
+  document.getElementById('auth-signup-pass').addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('auth-signup-pass2').focus(); });
 
-  // Show defaults immediately so app is usable right away
   departments = [...DEFAULT_DEPTS];
   renderDepts(); syncInvSelects(); buildQC();
 
   try {
     await openDB();
-    try {
-      const cfgDepts = await dbGet('config', 'departments');
-      if (cfgDepts && Array.isArray(cfgDepts.value) && cfgDepts.value.length > 0) {
-        departments = cfgDepts.value;
-      } else {
-        saveDepts();
-      }
-    } catch(e) { console.warn('Could not load depts:', e.message); }
-    try { products = (await dbGetAll('products')) || []; } catch(e) {}
-    try { await migrateLegacy(); } catch(e) {}
-    renderDepts(); syncInvSelects();
-    await loadTodayStats();
+    if (!dbClient) { showAuthScreen(); return; }
+
+    // Check for an existing session (page refresh / returning user)
+    const { data: { session } } = await dbClient.auth.getSession();
+    if (session && session.user) {
+      currentUser = session.user;
+      await onAuthSuccess();
+    } else {
+      showAuthScreen();
+    }
+
+    // Keep session fresh — update currentUser on auth state changes
+    dbClient.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) currentUser = session.user;
+      if (event === 'SIGNED_OUT') { currentUser = null; showAuthScreen(); }
+    });
+
   } catch(e) {
     console.error('Cloud init failed:', e.message);
     toast('Running offline — cloud unavailable', 'err');
+    showAuthScreen();
   }
-  document.getElementById('item-search').focus();
 }
 
 async function migrateLegacy() {
