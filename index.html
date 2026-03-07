@@ -42,7 +42,7 @@ button,input,select{font-family:inherit}
 
 /* ── SHELL ── */
 .app{display:grid;grid-template-rows:48px 1fr;height:100vh;width:100vw}
-.app > *:last-child{min-height:0}
+.app > *{min-height:0}
 
 /* ── TOPBAR ── */
 .topbar{
@@ -90,11 +90,11 @@ button,input,select{font-family:inherit}
 .view.active{display:flex}
 
 /* ── POS VIEW — 3-PANEL ── */
-#pos-view{display:none;grid-template-columns:210px 1fr 360px;height:100%;min-height:0;gap:0}
+#pos-view{display:none;grid-template-columns:210px 1fr 360px;grid-template-rows:1fr;height:100%;min-height:0;gap:0}
 #pos-view.active{display:grid}
 
 /* ── PANELS ── */
-.panel{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--bd);min-height:0;height:100%}
+.panel{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--bd);min-height:0;height:100%;align-self:stretch}
 .panel:last-child{border-right:none}
 .ph{
   padding:11px 16px;background:var(--s2);border-bottom:1px solid var(--bd);
