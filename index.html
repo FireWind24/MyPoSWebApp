@@ -49,41 +49,42 @@ button,input,select{font-family:inherit}
   background:var(--s1);
   border-bottom:1px solid var(--bd);
   display:flex;align-items:center;
-  padding:0 20px;gap:0;
+  padding:0;gap:0;
   box-shadow:0 1px 0 var(--bd);
+  overflow:hidden;
 }
 .tb-logo{
-  font-family:var(--mono);font-size:12px;font-weight:700;
-  color:var(--g);letter-spacing:2px;white-space:nowrap;
-  padding-right:20px;border-right:1px solid var(--bd);
-  display:flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:11px;font-weight:700;
+  color:var(--g);letter-spacing:1.5px;white-space:nowrap;
+  padding:0 14px;border-right:1px solid var(--bd);height:48px;
+  display:flex;align-items:center;gap:7px;flex-shrink:0;
 }
 .tb-logo-dot{width:7px;height:7px;background:var(--g);border-radius:50%;box-shadow:0 0 8px var(--g);animation:pulse-dot 2.5s ease-in-out infinite}
 @keyframes pulse-dot{0%,100%{opacity:1;box-shadow:0 0 8px var(--g)}50%{opacity:.5;box-shadow:0 0 3px var(--g)}}
 .tb-logo span{color:var(--t2);font-weight:400}
 
-.tb-nav{display:flex;height:48px;margin-left:4px;gap:2px;padding:0 4px}
+.tb-nav{display:flex;height:48px;gap:0;padding:0 2px;flex-shrink:1;min-width:0;overflow:hidden}
 .tb-tab{
-  padding:0 16px;height:100%;display:flex;align-items:center;gap:7px;
-  font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--t3);
+  padding:0 10px;height:100%;display:flex;align-items:center;gap:4px;
+  font-size:10px;font-weight:700;letter-spacing:.3px;color:var(--t3);
   cursor:pointer;border-bottom:2px solid transparent;transition:color var(--trs),border-color var(--trs);
   text-transform:uppercase;white-space:nowrap;background:none;
-  border-top:none;border-left:none;border-right:none;
+  border-top:none;border-left:none;border-right:none;flex-shrink:0;
 }
 .tb-tab:hover{color:var(--t2)}
 .tb-tab.active{color:var(--g);border-bottom-color:var(--g)}
-.tb-tab-icon{font-size:14px;line-height:1}
+.tb-tab-icon{font-size:12px;line-height:1}
 
-.tb-right{margin-left:auto;display:flex;align-items:center;gap:0}
+.tb-right{margin-left:auto;display:flex;align-items:stretch;gap:0;flex-shrink:0}
 .tb-metric{
-  display:flex;flex-direction:column;align-items:flex-end;
-  padding:0 16px;border-left:1px solid var(--bd);
+  display:flex;flex-direction:column;align-items:flex-end;justify-content:center;
+  padding:0 12px;border-left:1px solid var(--bd);
 }
-.tb-metric-v{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--g)}
-.tb-metric-l{font-size:9px;letter-spacing:1.5px;color:var(--t3);font-weight:700;text-transform:uppercase;margin-top:1px}
-.tb-clock-wrap{padding:0 20px;border-left:1px solid var(--bd);text-align:right}
-.tb-time{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--t);letter-spacing:.5px}
-.tb-date{font-size:9px;color:var(--t3);letter-spacing:1px;margin-top:1px}
+.tb-metric-v{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--g);white-space:nowrap}
+.tb-metric-l{font-size:8px;letter-spacing:.8px;color:var(--t3);font-weight:700;text-transform:uppercase;margin-top:1px;white-space:nowrap}
+.tb-clock-wrap{padding:0 14px;border-left:1px solid var(--bd);display:flex;flex-direction:column;justify-content:center;align-items:flex-end}
+.tb-time{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--t);letter-spacing:.5px;white-space:nowrap}
+.tb-date{font-size:8px;color:var(--t3);letter-spacing:.5px;margin-top:1px;white-space:nowrap}
 
 /* ── VIEWS ── */
 .view{display:none;height:100%;min-height:0}
@@ -522,9 +523,9 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
     <div class="tb-metric"><span class="tb-metric-v" id="tb-sales">Rs 0.00</span><span class="tb-metric-l">Today's Sales</span></div>
     <div class="tb-metric"><span class="tb-metric-v" id="tb-txns">0</span><span class="tb-metric-l">Transactions</span></div>
     <div class="tb-clock-wrap"><div class="tb-time" id="tb-time">00:00:00</div><div class="tb-date" id="tb-date">---</div></div>
-    <div id="tb-user-wrap" style="display:none;align-items:center;gap:0;border-left:1px solid var(--bd);padding:0 16px">
-      <span id="tb-user-email" style="font-size:10px;color:var(--t3);font-family:var(--mono);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
-      <button onclick="authLogout()" style="margin-left:10px;background:none;border:1px solid rgba(240,82,82,.2);color:var(--r);border-radius:5px;padding:3px 9px;font-size:10px;font-weight:700;cursor:pointer;transition:all .13s" onmouseover="this.style.background='var(--rlo)'" onmouseout="this.style.background='none'">Logout</button>
+    <div id="tb-user-wrap" style="display:none;align-items:center;gap:0;border-left:1px solid var(--bd);padding:0 14px;flex-shrink:0;height:48px">
+      <span id="tb-user-email" style="font-size:9px;color:var(--t3);font-family:var(--mono);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <button onclick="authLogout()" style="margin-left:8px;background:none;border:1px solid rgba(240,82,82,.2);color:var(--r);border-radius:5px;padding:3px 9px;font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap" onmouseover="this.style.background='var(--rlo)'" onmouseout="this.style.background='none'">Logout</button>
     </div>
   </div>
 </div>
@@ -1127,10 +1128,6 @@ function switchTab(tab) {
 // INIT
 // ═══════════════════════════════════════════════════════════════
 const DEFAULT_DEPTS = [
-  'MEDICAL STORE','GEN STORE','HAFIZ ASLAM','STILLMENS','D SOFT','BYE BYE',
-  'SENIOR','MILK','AZITH','NEUROBIOTIC','HUMULIN','VIGA','DOSE','COCA COLA',
-  'TOY','DOCTOR','ROSIP','HAFIZ','FACEMASK','MACH','NESTLE WATER',
-  'ALWAYS PAD','SUGAR TEST','ALOPIA OIL','EMPRO','SALEBASE','ON THE GO'
 ];
 
 async function init() {
