@@ -1152,10 +1152,6 @@ function switchTab(tab) {
 // INIT
 // ═══════════════════════════════════════════════════════════════
 const DEFAULT_DEPTS = [
-  'MEDICAL STORE','GEN STORE','HAFIZ ASLAM','STILLMENS','D SOFT','BYE BYE',
-  'SENIOR','MILK','AZITH','NEUROBIOTIC','HUMULIN','VIGA','DOSE','COCA COLA',
-  'TOY','DOCTOR','ROSIP','HAFIZ','FACEMASK','MACH','NESTLE WATER',
-  'ALWAYS PAD','SUGAR TEST','ALOPIA OIL','EMPRO','SALEBASE','ON THE GO'
 ];
 
 async function init() {
@@ -2089,8 +2085,8 @@ async function importProducts(e) {
     try {
       const data=JSON.parse(ev.target.result);
       if (!Array.isArray(data)) { toast('Invalid JSON','err'); return; }
-      // Strip id and user_id — let each account get fresh ids on import
-      const clean = data.map(p => { const {id, user_id, ...rest} = p; return rest; });
+      // Strip user_id, generate fresh id for each product so it works across accounts
+      const clean = data.map(p => { const {id, user_id, ...rest} = p; return {...rest, id: `p_${Date.now()}_${Math.random().toString(36).slice(2,8)}`}; });
       toast(`Importing ${clean.length} products…`, 'inf');
       const saved = await dbBulkUpsert('products', clean);
       if (saved.length > 0) {
