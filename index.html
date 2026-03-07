@@ -899,21 +899,31 @@ async function dbGet(store, key) {
     return data || undefined;
   } catch(e) { return undefined; }
 }
-async function dbPut(store, val) {
+async function dbPut(store, val, silent=false) {
   if (!dbClient || !uid()) return val;
   try {
     const { data, error } = await dbClient.from(store).upsert({...val, user_id: uid()}).select().single();
-    if (error) { console.error('dbPut:', error.message); toast('Cloud save failed!','err'); }
+    if (error) { console.error('dbPut:', error.message); if (!silent) toast('Cloud save failed!','err'); }
     return data || val;
   } catch(e) { return val; }
 }
-async function dbAdd(store, val) {
+async function dbAdd(store, val, silent=false) {
   if (!dbClient || !uid()) return val;
   try {
     const { data, error } = await dbClient.from(store).insert({...val, user_id: uid()}).select().single();
-    if (error) { console.error('dbAdd:', error.message); toast('Cloud save failed!','err'); }
+    if (error) { console.error('dbAdd:', error.message); if (!silent) toast('Cloud save failed!','err'); }
     return data || val;
   } catch(e) { return val; }
+}
+async function dbBulkUpsert(store, rows) {
+  // Batch upsert — attach user_id to every row, send in one request
+  if (!dbClient || !uid()) return [];
+  try {
+    const tagged = rows.map(r => ({...r, user_id: uid()}));
+    const { data, error } = await dbClient.from(store).upsert(tagged, {onConflict: 'id,user_id'}).select();
+    if (error) { console.error('dbBulkUpsert:', error.message); toast('Cloud import failed: ' + error.message,'err'); return []; }
+    return data || [];
+  } catch(e) { console.error('dbBulkUpsert exception:', e.message); return []; }
 }
 async function dbDelete(store, key) {
   if (!dbClient || !uid()) return;
@@ -1128,6 +1138,10 @@ function switchTab(tab) {
 // INIT
 // ═══════════════════════════════════════════════════════════════
 const DEFAULT_DEPTS = [
+  'MEDICAL STORE','GEN STORE','HAFIZ ASLAM','STILLMENS','D SOFT','BYE BYE',
+  'SENIOR','MILK','AZITH','NEUROBIOTIC','HUMULIN','VIGA','DOSE','COCA COLA',
+  'TOY','DOCTOR','ROSIP','HAFIZ','FACEMASK','MACH','NESTLE WATER',
+  'ALWAYS PAD','SUGAR TEST','ALOPIA OIL','EMPRO','SALEBASE','ON THE GO'
 ];
 
 async function init() {
@@ -1198,7 +1212,7 @@ async function migrateLegacy() {
   const oldP = localStorage.getItem('mms_products');
   if (oldP) {
     const prods = JSON.parse(oldP);
-    for (const p of prods) await dbPut('products', p).catch(()=>{});
+    for (const p of prods) await dbPut('products', p, true).catch(()=>{});
     localStorage.removeItem('mms_products');
   }
   // Migrate departments
@@ -1273,7 +1287,7 @@ async function ctxDelete() {
   if (orphans.length) {
     if (!departments.includes('UNCATEGORIZED')) departments.push('UNCATEGORIZED');
     products = products.map(p => p.dept === name ? {...p, dept:'UNCATEGORIZED'} : p);
-    orphans.forEach(p => dbPut('products', {...p, dept:'UNCATEGORIZED'}).catch(()=>{}));
+    await dbBulkUpsert('products', orphans.map(p=>({...p,dept:'UNCATEGORIZED'})));
   }
   departments.splice(ctxDeptIdx,1);
   await saveDepts();
@@ -1971,7 +1985,7 @@ async function quickDeleteDept(name) {
     if (!departments.includes('UNCATEGORIZED')) departments.push('UNCATEGORIZED');
     products = products.map(p => p.dept === name ? {...p, dept:'UNCATEGORIZED'} : p);
     // Persist each updated product
-    orphans.forEach(p => dbPut('products', {...p, dept:'UNCATEGORIZED'}).catch(()=>{}));
+    await dbBulkUpsert('products', orphans.map(p=>({...p,dept:'UNCATEGORIZED'})));
   }
   departments = departments.filter(d => d !== name);
   if (currentDept === name) currentDept = '';
@@ -1991,7 +2005,7 @@ async function clearAllDepts() {
   if (hasProducts) {
     departments.push('UNCATEGORIZED');
     products = products.map(p => ({...p, dept:'UNCATEGORIZED'}));
-    products.forEach(p => dbPut('products', p).catch(()=>{}));
+    await dbBulkUpsert('products', products);
   }
   departments = departments.filter(d => d === 'UNCATEGORIZED');
   if (currentDept !== 'UNCATEGORIZED') currentDept = '';
@@ -2021,16 +2035,27 @@ async function importCSV(e) {
   r.onload=async ev=>{
     const c=ev.target.result;
     if (!c.includes('Timestamp')) { toast('Invalid CSV','err'); return; }
-    const rows=c.split('\n').slice(1); let count=0;
+    const rows=c.split('\n').slice(1);
+    const batch=[];
     for (const row of rows) {
       if (!row.trim()) continue;
       const p=row.split('|'); if (p.length<9) continue;
       const [ts,depts,items,qtys,prices,sub,total,cash,change,discPct]=p;
       const dArr=depts.split(';'),nArr=items.split(';'),qArr=qtys.split(';').map(Number),prArr=prices.split(';').map(Number);
-      await dbAdd('invoices',{date:new Date(ts).getTime(),dateStr:ts,items:nArr.map((name,i)=>({name,dept:dArr[i]||'?',qty:qArr[i],price:prArr[i],total:qArr[i]*prArr[i]})),subtotal:parseFloat(sub),total:parseFloat(total),cash:parseFloat(cash),change:parseFloat(change),discPct:parseFloat(discPct||0)}).catch(()=>{});
-      count++;
+      batch.push({date:new Date(ts).getTime(),dateStr:ts,items:nArr.map((name,i)=>({name,dept:dArr[i]||'?',qty:qArr[i],price:prArr[i],total:qArr[i]*prArr[i]})),subtotal:parseFloat(sub),total:parseFloat(total),cash:parseFloat(cash),change:parseFloat(change),discPct:parseFloat(discPct||0)});
     }
-    await loadTodayStats(); toast(`Imported ${count} invoices`,'ok');
+    if (!batch.length) { toast('No valid rows found','err'); return; }
+    toast(`Importing ${batch.length} invoices…`,'inf');
+    // Invoices have no client-side id — use insert not upsert
+    if (dbClient && uid()) {
+      const tagged = batch.map(r => ({...r, user_id: uid()}));
+      const { data, error } = await dbClient.from('invoices').insert(tagged).select();
+      if (error) { toast('Import failed: ' + error.message,'err'); return; }
+      toast(`Imported ${(data||[]).length} invoices`,'ok');
+    } else {
+      toast('Not signed in','err'); return;
+    }
+    await loadTodayStats();
   };
   r.readAsText(file); e.target.value='';
 }
@@ -2050,11 +2075,16 @@ async function importProducts(e) {
     try {
       const data=JSON.parse(ev.target.result);
       if (!Array.isArray(data)) { toast('Invalid JSON','err'); return; }
-      for (const p of data) await dbPut('products',p).catch(()=>{});
-      products=await dbGetAll('products');
-      renderInventory(); renderDepts();
-      toast(`Imported ${data.length} products`,'ok'); refreshDataView();
-    } catch { toast('Parse error','err'); }
+      // Strip any stale user_id from exported rows — dbBulkUpsert will attach the correct one
+      const clean = data.map(p => { const {user_id, ...rest} = p; return rest; });
+      toast(`Importing ${clean.length} products…`, 'inf');
+      const saved = await dbBulkUpsert('products', clean);
+      if (saved.length > 0) {
+        products = await dbGetAll('products');
+        renderInventory(); renderDepts();
+        toast(`Imported ${saved.length} products`, 'ok'); refreshDataView();
+      }
+    } catch(err) { console.error(err); toast('Parse error: ' + err.message,'err'); }
   };
   r.readAsText(file); e.target.value='';
 }
