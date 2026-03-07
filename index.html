@@ -918,15 +918,24 @@ async function dbAdd(store, val, silent=false) {
 async function dbBulkUpsert(store, rows) {
   if (!dbClient || !uid()) return [];
   try {
-    // Ensure every row has an id, strip stale user_id, attach current user_id
-    const tagged = rows.map(r => {
-      const {user_id, ...rest} = r;
-      return {...rest, id: rest.id || `p_${Date.now()}_${Math.random().toString(36).slice(2,7)}`, user_id: uid()};
-    });
     const pk = store === 'config' ? 'key' : 'id';
-    const { data, error } = await dbClient.from(store).upsert(tagged, {onConflict: pk}).select();
-    if (error) { console.error('dbBulkUpsert:', error.message); toast('Cloud import failed: ' + error.message,'err'); return []; }
-    return data || [];
+    // Separate rows with ids (update existing) from rows without (fresh inserts)
+    const withId    = rows.filter(r => r[pk]);
+    const withoutId = rows.filter(r => !r[pk]);
+    let results = [];
+    if (withId.length) {
+      const tagged = withId.map(r => { const {user_id,...rest}=r; return {...rest, user_id: uid()}; });
+      const { data, error } = await dbClient.from(store).upsert(tagged, {onConflict: pk}).select();
+      if (error) { console.error('dbBulkUpsert upsert:', error.message); toast('Cloud import failed: ' + error.message,'err'); return []; }
+      results = results.concat(data || []);
+    }
+    if (withoutId.length) {
+      const tagged = withoutId.map(r => { const {user_id,...rest}=r; return {...rest, user_id: uid()}; });
+      const { data, error } = await dbClient.from(store).insert(tagged).select();
+      if (error) { console.error('dbBulkUpsert insert:', error.message); toast('Cloud import failed: ' + error.message,'err'); return []; }
+      results = results.concat(data || []);
+    }
+    return results;
   } catch(e) { console.error('dbBulkUpsert exception:', e.message); return []; }
 }
 async function dbDelete(store, key) {
@@ -2080,8 +2089,8 @@ async function importProducts(e) {
     try {
       const data=JSON.parse(ev.target.result);
       if (!Array.isArray(data)) { toast('Invalid JSON','err'); return; }
-      // dbBulkUpsert strips stale user_id and attaches the correct one internally
-      const clean = data.map(p => { const {user_id, ...rest} = p; return rest; });
+      // Strip id and user_id — let each account get fresh ids on import
+      const clean = data.map(p => { const {id, user_id, ...rest} = p; return rest; });
       toast(`Importing ${clean.length} products…`, 'inf');
       const saved = await dbBulkUpsert('products', clean);
       if (saved.length > 0) {
