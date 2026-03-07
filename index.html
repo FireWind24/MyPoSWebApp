@@ -1010,7 +1010,7 @@ async function authGoogle() {
   if (!dbClient) { toast('Not connected to cloud','err'); return; }
   const { error } = await dbClient.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: window.location.origin + window.location.pathname }
+    options: { redirectTo: 'https://my-po-s-web-app.vercel.app/' }
   });
   if (error) toast(error.message, 'err');
   // Page will redirect to Google and come back — onAuthStateChange handles the rest
