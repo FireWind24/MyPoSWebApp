@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Malik Medical Store — POS</title>
+<title id="page-title">My Store — POS</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -511,7 +511,7 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
 
 <!-- ══ TOPBAR ══ -->
 <div class="topbar">
-  <div class="tb-logo"><span class="tb-logo-dot"></span>MALIK <span>MEDICAL</span></div>
+  <div class="tb-logo"><span class="tb-logo-dot"></span><span id="tb-store-name">My Store</span></div>
   <nav class="tb-nav">
     <button class="tb-tab active" onclick="switchTab('pos')" id="tab-pos"><span class="tb-tab-icon">🧾</span>Register</button>
     <button class="tb-tab" onclick="switchTab('inv')" id="tab-inv"><span class="tb-tab-icon">📦</span>Inventory</button>
@@ -720,6 +720,17 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
 <div id="data-view" class="view">
   <div class="data-body">
     <div class="data-grid">
+      <div class="data-block">
+        <div class="db-head"><span class="db-head-title">Store Settings</span></div>
+        <div class="db-body">
+          <p class="db-desc">Your store name appears in the header, receipts, invoices, and reports.</p>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+            <input id="store-name-inp" class="ff-inp" placeholder="e.g. City Pharmacy" style="flex:1;max-width:260px"
+              onkeydown="if(event.key==='Enter')saveStoreName(this.value)">
+            <button class="btn btn-g btn-sm" onclick="saveStoreName(document.getElementById('store-name-inp').value)">Save</button>
+          </div>
+        </div>
+      </div>
       <div class="data-block">
         <div class="db-head"><span class="db-head-title">Invoice Database</span><span class="db-head-badge" style="color:var(--g)" id="db-inv-count">0 records</span></div>
         <div class="db-body">
@@ -1081,6 +1092,10 @@ async function onAuthSuccess() {
 
 async function loadUserData() {
   try {
+    const cfgName = await dbGet('config', 'storeName');
+    if (cfgName && cfgName.value) { storeName = cfgName.value; applyStoreName(); }
+  } catch(e) {}
+  try {
     const cfgDepts = await dbGet('config', 'departments');
     if (cfgDepts && Array.isArray(cfgDepts.value) && cfgDepts.value.length > 0) {
       departments = cfgDepts.value;
@@ -1116,6 +1131,7 @@ function toMs(v) { return typeof v==='number'?v:new Date(v||0).getTime(); } // r
 // STATE
 // ═══════════════════════════════════════════════════════════════
 let currentUser = null; // set after Supabase auth
+let storeName = 'My Store'; // loaded from config after login
 let cart = [], cartTotal = 0, currentDept = '';
 let departments = [], products = [];
 let cashReceived = 0, checkoutMode = false;
@@ -1145,13 +1161,17 @@ function switchTab(tab) {
   });
   if (tab==='inv')  { syncInvSelects(); renderInventory(); }
   if (tab==='invl') { renderInvoiceList(); }
-  if (tab==='data') { refreshDataView(); }
+  if (tab==='data') { refreshDataView(); document.getElementById('store-name-inp').value = storeName; }
 }
 
 // ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
 const DEFAULT_DEPTS = [
+  'MEDICAL STORE','GEN STORE','HAFIZ ASLAM','STILLMENS','D SOFT','BYE BYE',
+  'SENIOR','MILK','AZITH','NEUROBIOTIC','HUMULIN','VIGA','DOSE','COCA COLA',
+  'TOY','DOCTOR','ROSIP','HAFIZ','FACEMASK','MACH','NESTLE WATER',
+  'ALWAYS PAD','SUGAR TEST','ALOPIA OIL','EMPRO','SALEBASE','ON THE GO'
 ];
 
 async function init() {
@@ -1237,6 +1257,16 @@ async function migrateLegacy() {
 // ═══════════════════════════════════════════════════════════════
 // DEPARTMENTS
 // ═══════════════════════════════════════════════════════════════
+function applyStoreName() {
+  document.getElementById('tb-store-name').textContent = storeName;
+  document.getElementById('page-title').textContent = storeName + ' — POS';
+}
+async function saveStoreName(name) {
+  storeName = name.trim() || 'My Store';
+  applyStoreName();
+  await dbPut('config', {key:'storeName', value: storeName});
+  toast('Store name saved', 'ok');
+}
 async function saveDepts() {
   try { await dbPut('config', {key:'departments', value:departments}); }
   catch(e) { console.warn('saveDepts:', e.message); }
@@ -1630,7 +1660,7 @@ function buildReceipt(finalTotal, change, discPct) {
   let dl=''; if(discPct>0) dl=`DISCOUNT (${discPct}%): -Rs ${(cartTotal-finalTotal).toFixed(2)}\n`;
   document.getElementById('receipt-pre').textContent=
 `==========================
-    MALIK MEDICAL STORE
+    ${storeName}
 ==========================
 ${now.toLocaleString()}
 --------------------------
@@ -1654,7 +1684,7 @@ function printReceipt() {
   w.document.write(`<html><head><title>Receipt</title><style>body{font-family:monospace;white-space:pre-wrap;padding:20px;font-size:13px;line-height:1.6}</style></head><body>${esc(txt)}</body></html>`);
   w.document.close(); setTimeout(()=>{w.print();w.close();},200);
 }
-function dlTxt() { dlBlob(document.getElementById('receipt-pre').textContent,'text/plain',`Malik-Invoice-${new Date().toISOString().slice(0,10)}.txt`); toast('Downloaded','ok'); }
+function dlTxt() { dlBlob(document.getElementById('receipt-pre').textContent,'text/plain',`${storeName.replace(/\s+/g,'-')}-Invoice-${new Date().toISOString().slice(0,10)}.txt`); toast('Downloaded','ok'); }
 function dlPDF() {
   const txt=document.getElementById('receipt-pre').textContent;
   const w=window.open('','_blank');
@@ -1881,7 +1911,7 @@ async function printInvDetail(id) {
     lines+=`${(item.dept||'').padEnd(14)} ${item.name||''}\n  ${item.qty||0} x Rs${n2(item.price).padStart(8)} = Rs${n2(item.total)}\n`;
   });
   let dl=''; if(n0(inv.discPct)>0) dl=`DISCOUNT (${inv.discPct}%): -Rs ${(n0(inv.subtotal)-n0(inv.total)).toFixed(2)}\n`;
-  const txt=`==========================\n    MALIK MEDICAL STORE\n==========================\n${dt.toLocaleString()}\n--------------------------\n${lines}--------------------------\nSUBTOTAL  : Rs ${n2(inv.subtotal)}\n${dl}TOTAL     : Rs ${n2(inv.total)}\nCASH      : Rs ${n2(inv.cash)}\nCHANGE    : Rs ${n2(inv.change)}\n==========================\n        THANK YOU!\n==========================`;
+  const txt=`==========================\n    ${storeName}\n==========================\n${dt.toLocaleString()}\n--------------------------\n${lines}--------------------------\nSUBTOTAL  : Rs ${n2(inv.subtotal)}\n${dl}TOTAL     : Rs ${n2(inv.total)}\nCASH      : Rs ${n2(inv.cash)}\nCHANGE    : Rs ${n2(inv.change)}\n==========================\n        THANK YOU!\n==========================`;
   const w=window.open('','_blank');
   w.document.write(`<html><head><title>Invoice</title><style>body{font-family:monospace;white-space:pre-wrap;padding:20px;font-size:13px;line-height:1.6}</style></head><body>${esc(txt)}</body></html>`);
   w.document.close(); setTimeout(()=>{w.print();w.close();},200);
@@ -1921,7 +1951,7 @@ function buildReport(invs, title, from, to) {
   });
   const avg=invs.length?totalSales/invs.length:0;
   const deptLines=Object.entries(deptTotals).sort((a,b)=>b[1]-a[1]).map(([d,t])=>`${d.padEnd(20)} Rs ${n2(t)}`).join('\n');
-  const txt=`==========================\n  MALIK MEDICAL STORE\n  ${title}\n==========================\nPeriod  : ${from} → ${to}\nPrinted : ${new Date().toLocaleString()}\n--------------------------\nTRANSACTIONS : ${invs.length}\nTOTAL SALES  : Rs ${n2(totalSales)}\nTOTAL CASH   : Rs ${n2(totalCash)}\nDISCOUNTS    : Rs ${n2(totalDisc)}\nAVG SALE     : Rs ${n2(avg)}\n--------------------------\nSALES BY DEPARTMENT:\n${deptLines||'  (no data)'}\n==========================\n       END OF REPORT\n==========================`;
+  const txt=`==========================\n  ${storeName}\n  ${title}\n==========================\nPeriod  : ${from} → ${to}\nPrinted : ${new Date().toLocaleString()}\n--------------------------\nTRANSACTIONS : ${invs.length}\nTOTAL SALES  : Rs ${n2(totalSales)}\nTOTAL CASH   : Rs ${n2(totalCash)}\nDISCOUNTS    : Rs ${n2(totalDisc)}\nAVG SALE     : Rs ${n2(avg)}\n--------------------------\nSALES BY DEPARTMENT:\n${deptLines||'  (no data)'}\n==========================\n       END OF REPORT\n==========================`;
   document.getElementById('rep-output').textContent=txt;
   const cards=document.getElementById('stat-grid');
   cards.style.display='grid';
@@ -1938,7 +1968,7 @@ function printReport() {
   w.document.write(`<html><head><title>Report</title><style>body{font-family:monospace;white-space:pre-wrap;padding:20px;font-size:12px;line-height:1.6}</style></head><body>${esc(txt)}</body></html>`);
   w.document.close(); setTimeout(()=>{w.print();w.close();},200);
 }
-function dlReport() { dlBlob(document.getElementById('rep-output').textContent,'text/plain',`Malik-Report-${new Date().toISOString().slice(0,10)}.txt`); toast('Downloaded','ok'); }
+function dlReport() { dlBlob(document.getElementById('rep-output').textContent,'text/plain',`${storeName.replace(/\s+/g,'-')}-Report-${new Date().toISOString().slice(0,10)}.txt`); toast('Downloaded','ok'); }
 
 // ═══════════════════════════════════════════════════════════════
 // TODAY STATS
