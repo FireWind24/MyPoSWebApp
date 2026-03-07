@@ -349,6 +349,8 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
 .btn-ghost-b:hover{border-color:var(--b);color:var(--b);background:var(--blo)}
 .btn-ghost-r{background:transparent;border:1px solid rgba(240,82,82,.2);color:var(--r)}
 .btn-ghost-r:hover{border-color:var(--r);background:var(--rlo)}
+.btn-pu{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);color:var(--pu)}
+.btn-pu:hover{background:rgba(167,139,250,.2);border-color:var(--pu)}
 .btn-sm{padding:6px 11px;font-size:10px}
 .btn-xs{padding:4px 8px;font-size:9px}
 .btn-full{width:100%}
@@ -736,7 +738,9 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
         <div class="db-body">
           <p class="db-desc">Right-click any department in Register to rename it individually.</p>
           <button class="btn btn-ghost btn-sm" onclick="switchTab('pos');setTimeout(openDeptForm,50)">＋ Add Department</button>
-          <button class="btn btn-ghost-r btn-sm" onclick="clearAllDepts()">🗑 Delete All Departments</button>
+          <button class="btn btn-pu btn-sm" onclick="exportDepts()">⬆ Export CSV</button>
+          <label class="btn btn-ghost btn-sm" style="cursor:pointer;position:relative;overflow:hidden">⬇ Import CSV<input type="file" accept=".csv,.txt" style="position:absolute;inset:0;opacity:0;cursor:pointer" onchange="importDepts(event)"></label>
+          <button class="btn btn-ghost-r btn-sm" onclick="clearAllDepts()">🗑 Delete All</button>
           <div id="db-dept-body" style="margin-top:8px"></div>
         </div>
       </div>
@@ -1813,6 +1817,31 @@ async function clearProducts() {
   await dbClear('products'); products=[];
   renderInventory(); renderDepts();
   toast('Products cleared','inf'); refreshDataView();
+}
+
+function exportDepts() {
+  if (!departments.length) { toast('No departments to export','err'); return; }
+  const sorted = [...departments].sort((a,b)=>a.localeCompare(b));
+  const csv = 'Department\n' + sorted.map(d=>d.replace(/,/g,' ')).join('\n') + '\n';
+  dlBlob(csv, 'text/csv', `malik_departments_${new Date().toISOString().slice(0,10)}.csv`);
+  toast(`Exported ${sorted.length} departments`, 'ok');
+}
+
+async function importDepts(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = async ev => {
+    const lines = ev.target.result.split('\n').map(l=>l.trim().toUpperCase()).filter(l=>l && l!=='DEPARTMENT');
+    if (!lines.length) { toast('No departments found in file','err'); return; }
+    let added = 0;
+    lines.forEach(name => {
+      if (!departments.includes(name)) { departments.push(name); added++; }
+    });
+    await saveDepts();
+    renderDepts(); syncInvSelects(); refreshDataView();
+    toast(`Imported ${added} new department${added!==1?'s':''} (${lines.length-added} already existed)`, 'ok');
+  };
+  r.readAsText(file); e.target.value='';
 }
 
 // ═══════════════════════════════════════════════════════════════
