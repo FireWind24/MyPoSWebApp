@@ -916,11 +916,15 @@ async function dbAdd(store, val, silent=false) {
   } catch(e) { return val; }
 }
 async function dbBulkUpsert(store, rows) {
-  // Batch upsert — attach user_id to every row, send in one request
   if (!dbClient || !uid()) return [];
   try {
-    const tagged = rows.map(r => ({...r, user_id: uid()}));
-    const { data, error } = await dbClient.from(store).upsert(tagged, {onConflict: 'id,user_id'}).select();
+    // Ensure every row has an id, strip stale user_id, attach current user_id
+    const tagged = rows.map(r => {
+      const {user_id, ...rest} = r;
+      return {...rest, id: rest.id || `p_${Date.now()}_${Math.random().toString(36).slice(2,7)}`, user_id: uid()};
+    });
+    const pk = store === 'config' ? 'key' : 'id';
+    const { data, error } = await dbClient.from(store).upsert(tagged, {onConflict: pk}).select();
     if (error) { console.error('dbBulkUpsert:', error.message); toast('Cloud import failed: ' + error.message,'err'); return []; }
     return data || [];
   } catch(e) { console.error('dbBulkUpsert exception:', e.message); return []; }
@@ -2075,7 +2079,7 @@ async function importProducts(e) {
     try {
       const data=JSON.parse(ev.target.result);
       if (!Array.isArray(data)) { toast('Invalid JSON','err'); return; }
-      // Strip any stale user_id from exported rows — dbBulkUpsert will attach the correct one
+      // dbBulkUpsert strips stale user_id and attaches the correct one internally
       const clean = data.map(p => { const {user_id, ...rest} = p; return rest; });
       toast(`Importing ${clean.length} products…`, 'inf');
       const saved = await dbBulkUpsert('products', clean);
