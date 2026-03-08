@@ -550,7 +550,6 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
   <!-- DEPT PANEL -->
   <div class="panel" id="dept-panel">
     <div class="ph"><span class="ph-title">Departments</span><button class="btn btn-ghost btn-xs" onclick="openDeptForm()">＋</button></div>
-    <div class="ph-shortcuts"><span class="phs"><kbd>Enter</kbd>Select</span><span class="phs"><kbd>Esc</kbd>Back</span></div>
     <div class="dept-searchbox"><input id="dept-search" placeholder="Search…" oninput="filterDepts(this.value)" onkeydown="handleDeptSearchKey(event)"></div>
     <div class="panel-scroll"><div class="dept-list" id="dept-list"></div></div>
     <div class="pfoot" id="dept-form" style="display:none">
@@ -565,7 +564,6 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
   <!-- REGISTER PANEL -->
   <div class="panel" id="reg-panel">
     <div class="ph"><span class="ph-title" id="reg-title">Register</span><span style="font-family:var(--mono);font-size:10px;color:var(--t3)" id="reg-count">0 items</span></div>
-    <div class="ph-shortcuts"><span class="phs"><kbd>Enter</kbd>Add</span><span class="phs"><kbd>⇧Enter</kbd>Checkout</span><span class="phs"><kbd>^⇧Enter</kbd>Complete</span><span class="phs"><kbd>Esc</kbd>Clear</span><span class="phs"><kbd>F2</kbd>New sale</span><span class="phs"><kbd>↑↓</kbd>Navigate</span></div>
     <div class="panel-scroll" id="reg-scroll">
 
       <div class="vfd" id="vfd">
