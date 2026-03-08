@@ -470,13 +470,13 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
 #rep-view{flex-direction:column;height:100%}
 #rep-view.active{display:flex}
 .rep-layout{flex:1;display:grid;grid-template-columns:280px 1fr;overflow:hidden}
-.rep-side{border-right:1px solid var(--bd);background:var(--s1);padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;min-width:0;overflow-x:hidden}
+.rep-side{border-right:1px solid var(--bd);background:var(--s1);padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;min-width:0;overflow-x:hidden;width:210px;flex-shrink:0}
 .rep-main{padding:20px;overflow-y:auto;background:var(--bg)}
 
 .rep-card{background:var(--s2);border:1px solid var(--bd);border-radius:10px;overflow:hidden}
 .rep-card-head{padding:9px 13px;background:var(--s3);border-bottom:1px solid var(--bd);font-size:9px;font-weight:800;letter-spacing:2px;color:var(--t3);text-transform:uppercase}
 .rep-card-body{padding:11px 13px}
-.rep-btns{display:flex;flex-direction:column;gap:6px}
+.rep-btns{display:flex;flex-direction:column;gap:4px}
 .rep-date-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:9px}
 .rdf{display:flex;flex-direction:column;gap:4px;min-width:0}
 .rdf label{font-size:9px;font-weight:800;letter-spacing:1.5px;color:var(--t3);text-transform:uppercase}
@@ -724,11 +724,11 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
       <div class="rep-card">
         <div class="rep-card-head">Quick Reports</div>
         <div class="rep-card-body rep-btns">
-          <button class="btn btn-b btn-full btn-sm" onclick="quickReport('today')">📆 Today</button>
-          <button class="btn btn-ghost btn-full btn-sm" onclick="endOfDay()">🏁 End of Day</button>
-          <button class="btn btn-ghost btn-full btn-sm" onclick="quickReport('week')">📅 This Week</button>
-          <button class="btn btn-ghost btn-full btn-sm" onclick="quickReport('month')">🗓 This Month</button>
-          <button class="btn btn-ghost btn-full btn-sm" onclick="quickReport('all')">📋 All Time</button>
+          <button class="btn btn-b btn-full btn-xs" onclick="quickReport('today')">📆 Today</button>
+          <button class="btn btn-ghost btn-full btn-xs" onclick="endOfDay()">🏁 End of Day</button>
+          <button class="btn btn-ghost btn-full btn-xs" onclick="quickReport('week')">📅 This Week</button>
+          <button class="btn btn-ghost btn-full btn-xs" onclick="quickReport('month')">🗓 This Month</button>
+          <button class="btn btn-ghost btn-full btn-xs" onclick="quickReport('all')">📋 All Time</button>
         </div>
       </div>
       <div class="rep-card">
@@ -744,7 +744,7 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
       <div class="rep-card">
         <div class="rep-card-head">Top Products</div>
         <div class="rep-card-body">
-          <div id="top-products-list" style="font-size:11px;color:var(--t3);line-height:1.8">Run a report to see top products.</div>
+          <div id="top-products-list" style="font-size:11px;color:var(--t3);line-height:1.8;max-height:220px;overflow-y:auto">Run a report to see top products.</div>
         </div>
       </div>
       <div class="rep-card">
@@ -1623,6 +1623,9 @@ function cancelCheckout() {
   document.getElementById('vfd-item').textContent = cart.length ? cart[cart.length-1].name : 'READY';
   document.getElementById('vfd-cash').textContent='';
   document.getElementById('vfd-change').textContent='';
+  document.getElementById('cash-inp').value='';
+  const denDiv=document.getElementById('change-denoms');
+  denDiv.style.display='none'; denDiv.innerHTML='';
   setStatus('Checkout cancelled','inf');
 }
 
@@ -1718,6 +1721,8 @@ function newSale() {
   document.getElementById('vfd-total').textContent='Rs 0.00';
   document.getElementById('vfd').classList.remove('checking','done');
   document.getElementById('cash-section').classList.remove('visible');
+  document.getElementById('cash-inp').value='';
+  const _den=document.getElementById('change-denoms'); _den.style.display='none'; _den.innerHTML='';
   document.getElementById('disc-pct').value='';
   document.getElementById('disc-saved').textContent='—';
   document.querySelectorAll('.dp-btn').forEach(b=>b.classList.remove('active'));
@@ -2350,6 +2355,7 @@ window.addEventListener('beforeunload', e => {
 document.addEventListener('keydown', e => {
   if (e.ctrlKey && e.shiftKey && e.key==='Enter') { e.preventDefault(); completeCheckout(); }
   else if (e.ctrlKey && e.shiftKey && e.key==='P') { e.preventDefault(); printReceipt(); }
+  else if (e.key==='Enter' && e.shiftKey && !e.ctrlKey && document.getElementById('pos-view').classList.contains('active')) { e.preventDefault(); initiateCheckout(); }
   else if (e.key==='F2') { e.preventDefault(); newSale(); }
   else if (e.key==='F4') { e.preventDefault(); switchTab('pos'); }
   else if (e.key==='F5') { e.preventDefault(); switchTab('inv'); }
