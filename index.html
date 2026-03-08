@@ -2126,20 +2126,18 @@ async function importProducts(e) {
       const data=JSON.parse(ev.target.result);
       if (!Array.isArray(data)) { toast('Invalid JSON','err'); return; }
 
-      // Merge with existing products — match on name+dept (case-insensitive)
-      // Update price if exists, add new if not
+      // Merge with existing products — match on name alone (case-insensitive)
+      // Update dept and/or price if changed, add new if not found
       let added=0, updated=0;
       const toSave = [];
       data.forEach(p => {
         if (!p.name || !p.dept) return;
-        const existing = products.find(x =>
-          x.name.toLowerCase()===p.name.toLowerCase() && x.dept.toLowerCase()===p.dept.toLowerCase()
-        );
+        const existing = products.find(x => x.name.toLowerCase()===p.name.toLowerCase());
         if (existing) {
-          // Update price if changed
-          if (n0(existing.price) !== n0(p.price)) {
-            const updated_prod = {...existing, price: n0(p.price)};
-            toSave.push(updated_prod);
+          const priceChanged = n0(existing.price) !== n0(p.price);
+          const deptChanged  = existing.dept.toLowerCase() !== p.dept.toLowerCase();
+          if (priceChanged || deptChanged) {
+            toSave.push({...existing, dept: p.dept, price: n0(p.price)});
             updated++;
           }
           // else identical — skip
