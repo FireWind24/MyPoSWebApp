@@ -1935,7 +1935,7 @@ async function printInvDetail(id) {
 async function quickReport(range) {
   const now=new Date(); let start, end=new Date(now);
   if (range==='today') { start=new Date(now); start.setHours(0,0,0,0); end.setHours(23,59,59,999); }
-  else if (range==='week') { start=new Date(now); start.setDate(now.getDate()-now.getDay()); start.setHours(0,0,0,0); end.setHours(23,59,59,999); }
+  else if (range==='week') { start=new Date(now); const day=now.getDay(); start.setDate(now.getDate()-(day===0?6:day-1)); start.setHours(0,0,0,0); end.setHours(23,59,59,999); }
   else if (range==='month') { start=new Date(now.getFullYear(),now.getMonth(),1,0,0,0,0); end.setHours(23,59,59,999); }
   else { start=new Date(0); end=new Date(); }
   const labels={today:'TODAY',week:'THIS WEEK',month:'THIS MONTH',all:'ALL TIME'};
