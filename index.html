@@ -366,6 +366,8 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
 .btn-ghost-r:hover{border-color:var(--r);background:var(--rlo)}
 .btn-pu{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);color:var(--pu)}
 .btn-pu:hover{background:rgba(167,139,250,.2);border-color:var(--pu)}
+.btn-ghost-g{background:rgba(0,214,143,.08);border:1px solid rgba(0,214,143,.25);color:var(--g)}
+.btn-ghost-g:hover{background:rgba(0,214,143,.16);border-color:var(--g)}
 .btn-sm{padding:6px 11px;font-size:10px}
 .btn-xs{padding:4px 8px;font-size:9px}
 .btn-full{width:100%}
@@ -769,7 +771,7 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
           <p class="db-desc">Right-click any department in Register to rename it individually.</p>
           <button class="btn btn-ghost btn-sm" onclick="switchTab('pos');setTimeout(openDeptForm,50)">＋ Add Department</button>
           <button class="btn btn-pu btn-sm" onclick="exportDepts()">⬆ Export CSV</button>
-          <label class="btn btn-ghost btn-sm" style="cursor:pointer;position:relative;overflow:hidden">⬇ Import CSV<input type="file" accept=".csv,.txt" style="position:absolute;inset:0;opacity:0;cursor:pointer" onchange="importDepts(event)"></label>
+          <label class="btn btn-ghost-g btn-sm" style="cursor:pointer;position:relative;overflow:hidden">⬇ Import CSV<input type="file" accept=".csv,.txt" style="position:absolute;inset:0;opacity:0;cursor:pointer" onchange="importDepts(event)"></label>
           <button class="btn btn-ghost-r btn-sm" onclick="clearAllDepts()">🗑 Delete All</button>
           <div id="db-dept-body" style="margin-top:8px"></div>
         </div>
