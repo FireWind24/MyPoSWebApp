@@ -92,6 +92,10 @@ button,input,select{font-family:inherit}
   vertical-align:middle;line-height:1.4;
 }
 .tb-tab.active .tb-fkey{color:var(--g);border-color:rgba(0,214,143,.3);background:rgba(0,214,143,.08)}
+.sc-section-head{font-size:9px;font-weight:800;letter-spacing:1.5px;color:var(--t3);text-transform:uppercase;margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid var(--bd)}
+.sc-row{display:flex;align-items:center;gap:10px;padding:4px 0;border-bottom:1px solid rgba(30,45,69,.4)}
+.sc-row kbd{font-size:9px;background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2px 6px;font-family:var(--mono);color:var(--t2);white-space:nowrap;flex-shrink:0}
+.sc-row span{font-size:11px;color:var(--t2);font-weight:500}
 .ph-shortcuts{
   display:flex;align-items:center;gap:6px;flex-wrap:wrap;
   padding:4px 10px;background:var(--bg);border-bottom:1px solid var(--bd);
@@ -368,6 +372,15 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
 .btn-pu:hover{background:rgba(167,139,250,.2);border-color:var(--pu)}
 .btn-ghost-g{background:rgba(0,214,143,.08);border:1px solid rgba(0,214,143,.25);color:var(--g)}
 .btn-ghost-g:hover{background:rgba(0,214,143,.16);border-color:var(--g)}
+.denom-row{display:flex;flex-wrap:wrap;gap:4px;align-items:center;padding:4px 0}
+.denom-lbl{font-size:9px;font-weight:800;color:var(--t3);letter-spacing:1px;text-transform:uppercase;margin-right:4px;white-space:nowrap}
+.denom-chip{background:var(--s3);border:1px solid var(--bd);border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;color:var(--g);font-family:var(--mono);white-space:nowrap}
+.disc-presets{display:flex;align-items:center;gap:5px;padding:6px 12px;flex-wrap:wrap;background:var(--s2);border-radius:var(--rad);margin:6px 0 2px}
+.disc-preset-lbl{font-size:9px;font-weight:800;letter-spacing:1px;color:var(--t3);text-transform:uppercase;margin-right:2px;white-space:nowrap}
+.dp-btn{padding:3px 9px;border-radius:4px;border:1px solid var(--bd2);background:var(--s3);color:var(--t2);font-size:10px;font-weight:700;cursor:pointer;font-family:var(--sans);transition:all .13s}
+.dp-btn:hover{border-color:var(--y);color:var(--y);background:rgba(251,191,36,.08)}
+.dp-btn.active{border-color:var(--y);color:var(--y);background:rgba(251,191,36,.12)}
+.dp-btn-clr:hover{border-color:var(--r);color:var(--r);background:var(--rlo)}
 .btn-sm{padding:6px 11px;font-size:10px}
 .btn-xs{padding:4px 8px;font-size:9px}
 .btn-full{width:100%}
@@ -592,6 +605,15 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
         <div class="field-group" style="align-self:end"><button class="btn btn-g btn-full" onclick="addItem()" style="height:38px">＋ Add</button></div>
       </div>
 
+      <div class="disc-presets" id="disc-presets">
+        <span class="disc-preset-lbl">Quick Disc:</span>
+        <button class="dp-btn" onclick="applyDiscPreset(5)">5%</button>
+        <button class="dp-btn" onclick="applyDiscPreset(10)">10%</button>
+        <button class="dp-btn" onclick="applyDiscPreset(15)">15%</button>
+        <button class="dp-btn" onclick="applyDiscPreset(20)">20%</button>
+        <button class="dp-btn" onclick="applyDiscPreset(25)">25%</button>
+        <button class="dp-btn dp-btn-clr" onclick="applyDiscPreset(0)">✕ Clear</button>
+      </div>
       <div class="disc-strip">
         <span class="disc-lbl">Disc %</span>
         <input class="disc-field" id="disc-pct" type="number" min="0" max="100" step=".5" placeholder="0" oninput="onDiscInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('item-search').focus()}if(event.key==='Escape'){this.value='';onDiscInput();document.getElementById('item-search').focus()}">
@@ -611,6 +633,7 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
         <div class="cash-lbl">Cash Received</div>
         <input class="cash-inp" id="cash-inp" type="number" min="0" step="0.01" placeholder="0.00" oninput="previewChange()" onkeydown="onCashKey(event)">
         <div class="qc-row" id="qc-row"></div>
+        <div id="change-denoms" style="display:none;padding:6px 0 2px"></div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-g btn-full" onclick="completeCheckout()">✓ Complete Sale</button>
           <button class="btn btn-ghost" onclick="cancelCheckout()">Cancel</button>
@@ -702,6 +725,7 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
         <div class="rep-card-head">Quick Reports</div>
         <div class="rep-card-body rep-btns">
           <button class="btn btn-b btn-full btn-sm" onclick="quickReport('today')">📆 Today</button>
+          <button class="btn btn-ghost btn-full btn-sm" onclick="endOfDay()">🏁 End of Day</button>
           <button class="btn btn-ghost btn-full btn-sm" onclick="quickReport('week')">📅 This Week</button>
           <button class="btn btn-ghost btn-full btn-sm" onclick="quickReport('month')">🗓 This Month</button>
           <button class="btn btn-ghost btn-full btn-sm" onclick="quickReport('all')">📋 All Time</button>
@@ -718,6 +742,12 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
         </div>
       </div>
       <div class="rep-card">
+        <div class="rep-card-head">Top Products</div>
+        <div class="rep-card-body">
+          <div id="top-products-list" style="font-size:11px;color:var(--t3);line-height:1.8">Run a report to see top products.</div>
+        </div>
+      </div>
+      <div class="rep-card">
         <div class="rep-card-head">Export</div>
         <div class="rep-card-body rep-btns">
           <button class="btn btn-ghost btn-full btn-sm" onclick="printReport()">⎙ Print</button>
@@ -727,6 +757,11 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
     </div>
     <div class="rep-main" id="rep-main">
       <div class="stat-grid" id="stat-grid" style="display:none"></div>
+      <div id="sales-chart-wrap" style="display:none;padding:0 0 16px">
+        <div style="font-size:9px;font-weight:800;letter-spacing:1.5px;color:var(--t3);text-transform:uppercase;margin-bottom:10px">Daily Sales</div>
+        <div id="sales-chart" style="display:flex;align-items:flex-end;gap:3px;height:80px;overflow-x:auto"></div>
+        <div id="sales-chart-labels" style="display:flex;gap:3px;margin-top:4px;overflow-x:auto"></div>
+      </div>
       <div class="rep-output" id="rep-output">Select a report range from the left panel.</div>
     </div>
   </div>
@@ -785,6 +820,40 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
 </div>
 
 </div><!-- .app -->
+
+<!-- ══ SHORTCUT MODAL ══ -->
+<div id="shortcut-modal" style="display:none;position:fixed;inset:0;background:rgba(9,13,20,.85);z-index:999;align-items:center;justify-content:center;backdrop-filter:blur(6px)" onclick="closeShortcuts()">
+  <div style="background:var(--s1);border:1px solid var(--bd2);border-radius:16px;padding:28px 32px;min-width:420px;max-width:520px;box-shadow:0 32px 80px rgba(0,0,0,.8)" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <span style="font-size:13px;font-weight:800;letter-spacing:1px;color:var(--t)">KEYBOARD SHORTCUTS</span>
+      <button onclick="closeShortcuts()" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:18px;line-height:1;padding:0">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px">
+      <div class="sc-section">
+        <div class="sc-section-head">Register</div>
+        <div class="sc-row"><kbd>Enter</kbd><span>Add item to cart</span></div>
+        <div class="sc-row"><kbd>Shift+Enter</kbd><span>Go to checkout</span></div>
+        <div class="sc-row"><kbd>Ctrl+Shift+Enter</kbd><span>Complete sale</span></div>
+        <div class="sc-row"><kbd>Esc</kbd><span>Clear entry</span></div>
+        <div class="sc-row"><kbd>F2</kbd><span>New sale</span></div>
+        <div class="sc-row"><kbd>↑ ↓</kbd><span>Navigate autocomplete</span></div>
+        <div class="sc-row"><kbd>Tab</kbd><span>Select suggestion</span></div>
+      </div>
+      <div class="sc-section">
+        <div class="sc-section-head">Navigation</div>
+        <div class="sc-row"><kbd>F4</kbd><span>Register tab</span></div>
+        <div class="sc-row"><kbd>F5</kbd><span>Inventory tab</span></div>
+        <div class="sc-row"><kbd>F6</kbd><span>Invoices tab</span></div>
+        <div class="sc-row"><kbd>F7</kbd><span>Reports tab</span></div>
+        <div class="sc-row"><kbd>F8</kbd><span>Data tab</span></div>
+        <div class="sc-section-head" style="margin-top:14px">Other</div>
+        <div class="sc-row"><kbd>Ctrl+Shift+P</kbd><span>Print receipt</span></div>
+        <div class="sc-row"><kbd>?</kbd><span>Show this screen</span></div>
+      </div>
+    </div>
+    <div style="margin-top:18px;text-align:center;font-size:10px;color:var(--t3)">Press <kbd>Esc</kbd> or click outside to close</div>
+  </div>
+</div>
 
 <!-- ══ AUTH SCREEN ══ -->
 <style>
@@ -1562,6 +1631,15 @@ function previewChange() {
   const final = getDiscountedTotal(), chg = cash-final;
   document.getElementById('vfd-cash').textContent=`CASH: Rs ${cash.toFixed(2)}`;
   document.getElementById('vfd-change').textContent=chg>=0?`CHANGE: Rs ${chg.toFixed(2)}`:`SHORT: Rs ${Math.abs(chg).toFixed(2)}`;
+  // Denomination breakdown
+  const denDiv=document.getElementById('change-denoms');
+  if(chg>0){
+    const notes=[5000,1000,500,100,50,20,10,5,2,1];
+    let rem=Math.round(chg); const parts=[];
+    notes.forEach(n=>{ if(rem>=n){const cnt=Math.floor(rem/n);parts.push(`${cnt}×${n}`);rem-=cnt*n;} });
+    denDiv.style.display='block';
+    denDiv.innerHTML=`<div class="denom-row"><span class="denom-lbl">Give:</span>${parts.map(p=>`<span class="denom-chip">${p}</span>`).join('')}</div>`;
+  } else { denDiv.style.display='none'; denDiv.innerHTML=''; }
 }
 
 async function completeCheckout() {
@@ -1611,6 +1689,14 @@ async function completeCheckout() {
   toast('Change: Rs '+change.toFixed(2),'ok');
 }
 
+function applyDiscPreset(pct) {
+  document.getElementById('disc-pct').value = pct || '';
+  onDiscInput();
+  // toggle active state on buttons
+  document.querySelectorAll('.dp-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent === pct+'%');
+  });
+}
 function buildQC() {
   const wrap = document.getElementById('qc-row');
   wrap.innerHTML='';
@@ -1634,6 +1720,7 @@ function newSale() {
   document.getElementById('cash-section').classList.remove('visible');
   document.getElementById('disc-pct').value='';
   document.getElementById('disc-saved').textContent='—';
+  document.querySelectorAll('.dp-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('disc-final').textContent='Rs 0.00';
   document.getElementById('receipt-bar').classList.remove('show');
   document.getElementById('receipt-acts').classList.remove('show');
@@ -1965,6 +2052,43 @@ function buildReport(invs, title, from, to) {
   const deptLines=Object.entries(deptTotals).sort((a,b)=>b[1]-a[1]).map(([d,t])=>`${d.padEnd(20)} Rs ${n2(t)}`).join('\n');
   const txt=`==========================\n  ${storeName}\n  ${title}\n==========================\nPeriod  : ${from} → ${to}\nPrinted : ${new Date().toLocaleString()}\n--------------------------\nTRANSACTIONS : ${invs.length}\nTOTAL SALES  : Rs ${n2(totalSales)}\nTOTAL CASH   : Rs ${n2(totalCash)}\nDISCOUNTS    : Rs ${n2(totalDisc)}\nAVG SALE     : Rs ${n2(avg)}\n--------------------------\nSALES BY DEPARTMENT:\n${deptLines||'  (no data)'}\n==========================\n       END OF REPORT\n==========================`;
   document.getElementById('rep-output').textContent=txt;
+  // Top products by qty sold
+  const prodQtys={};
+  invs.forEach(inv=>(inv.items||[]).forEach(item=>{
+    const k=item.name||'?';
+    if(!prodQtys[k]) prodQtys[k]={qty:0,rev:0};
+    prodQtys[k].qty+=n0(item.qty);
+    prodQtys[k].rev+=n0(item.total);
+  }));
+  const topList=Object.entries(prodQtys).sort((a,b)=>b[1].qty-a[1].qty).slice(0,10);
+  const tpEl=document.getElementById('top-products-list');
+  // Daily sales chart (only meaningful for week/month/custom — not all-time)
+  const dailyMap={};
+  invs.forEach(inv=>{
+    const d=new Date(toMs(inv.date)).toLocaleDateString('en-PK',{month:'short',day:'numeric'});
+    dailyMap[d]=(dailyMap[d]||0)+n0(inv.total);
+  });
+  const chartWrap=document.getElementById('sales-chart-wrap');
+  const chartEl=document.getElementById('sales-chart');
+  const labelsEl=document.getElementById('sales-chart-labels');
+  const days=Object.keys(dailyMap);
+  if(days.length>1 && days.length<=62){
+    const maxV=Math.max(...Object.values(dailyMap))||1;
+    chartEl.innerHTML=days.map(d=>{
+      const h=Math.max(4,Math.round((dailyMap[d]/maxV)*72));
+      return `<div title="Rs ${n2(dailyMap[d])}" style="flex:1;min-width:12px;height:${h}px;background:var(--g);opacity:.75;border-radius:2px 2px 0 0;transition:opacity .13s;cursor:default" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity='.75'"></div>`;
+    }).join('');
+    labelsEl.innerHTML=days.map(d=>`<div style="flex:1;min-width:12px;font-size:7px;color:var(--t3);text-align:center;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d}</div>`).join('');
+    chartWrap.style.display='block';
+  } else { chartWrap.style.display='none'; }
+  if(topList.length){
+    tpEl.innerHTML=topList.map(([name,d],i)=>
+      `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--bd);gap:8px">
+        <span style="color:var(--t2);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1"><span style="color:var(--t3);font-family:var(--mono);font-size:9px;margin-right:5px">${i+1}.</span>${name}</span>
+        <span style="color:var(--g);font-family:var(--mono);white-space:nowrap;font-size:10px">${Math.round(d.qty)} units</span>
+      </div>`
+    ).join('');
+  } else { tpEl.textContent='No sales data.'; }
   const cards=document.getElementById('stat-grid');
   cards.style.display='grid';
   cards.innerHTML=`
@@ -1974,6 +2098,10 @@ function buildReport(invs, title, from, to) {
     <div class="stat-card"><div class="sc-lbl">Discounts</div><div class="sc-val yel">Rs ${Math.round(totalDisc).toLocaleString()}</div></div>`;
 }
 
+async function endOfDay() {
+  await quickReport('today');
+  setTimeout(()=>printReport(),400);
+}
 function printReport() {
   const txt=document.getElementById('rep-output').textContent;
   const w=window.open('','_blank');
@@ -2214,6 +2342,11 @@ function toast(msg,type='inf'){const w=document.getElementById('toasts');const e
 // ═══════════════════════════════════════════════════════════════
 // GLOBAL KEYBOARD
 // ═══════════════════════════════════════════════════════════════
+function openShortcuts()  { document.getElementById('shortcut-modal').style.display='flex'; }
+function closeShortcuts() { document.getElementById('shortcut-modal').style.display='none'; }
+window.addEventListener('beforeunload', e => {
+  if (cart.length > 0) { e.preventDefault(); e.returnValue = ''; }
+});
 document.addEventListener('keydown', e => {
   if (e.ctrlKey && e.shiftKey && e.key==='Enter') { e.preventDefault(); completeCheckout(); }
   else if (e.ctrlKey && e.shiftKey && e.key==='P') { e.preventDefault(); printReceipt(); }
@@ -2223,6 +2356,8 @@ document.addEventListener('keydown', e => {
   else if (e.key==='F6') { e.preventDefault(); switchTab('invl'); }
   else if (e.key==='F7') { e.preventDefault(); switchTab('rep'); }
   else if (e.key==='F8') { e.preventDefault(); switchTab('data'); }
+  else if (e.key==='?' && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) { e.preventDefault(); openShortcuts(); }
+  else if (e.key==='Escape') { closeShortcuts(); }
 });
 
 init();
