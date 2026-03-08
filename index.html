@@ -467,16 +467,15 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
 .inv-rc-acts{padding:12px 18px;background:var(--s2);border-top:1px solid var(--bd);display:flex;gap:7px}
 
 /* ── REPORTS ── */
-#rep-view{flex-direction:column;height:100%}
+#rep-view{flex-direction:column;height:100%;min-height:0}
 #rep-view.active{display:flex}
-.rep-layout{flex:1;display:grid;grid-template-columns:240px 1fr;overflow:hidden}
-.rep-side{border-right:1px solid var(--bd);background:var(--s1);padding:14px;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:10px;min-width:0}
-.rep-main{padding:20px;overflow-y:auto;background:var(--bg)}
+.rep-layout{flex:1;display:grid;grid-template-columns:240px 1fr;min-height:0;height:100%}
+.rep-side{border-right:1px solid var(--bd);background:var(--s1);padding:14px;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:10px;min-width:0;height:100%}
+.rep-main{padding:20px;overflow-y:auto;background:var(--bg);min-height:0}
 
-.rep-card{background:var(--s2);border:1px solid var(--bd);border-radius:10px;overflow:hidden}
+.rep-card{background:var(--s2);border:1px solid var(--bd);border-radius:10px;overflow:hidden;flex-shrink:0}
 .rep-card-head{padding:9px 13px;background:var(--s3);border-bottom:1px solid var(--bd);font-size:9px;font-weight:800;letter-spacing:2px;color:var(--t3);text-transform:uppercase}
-.rep-card-body{padding:9px 11px;overflow-y:auto;max-height:220px}
-.rep-card-body.rep-btns{max-height:none;overflow:visible}
+.rep-card-body{padding:9px 11px}
 .rep-btns{display:flex;flex-direction:column;gap:5px}
 .rep-date-grid{display:grid;grid-template-columns:1fr;gap:6px;margin-bottom:8px}
 .rdf{display:flex;flex-direction:column;gap:4px;min-width:0}
