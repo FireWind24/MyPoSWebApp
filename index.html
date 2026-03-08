@@ -83,8 +83,22 @@ button,input,select{font-family:inherit}
 .tb-metric-v{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--g);white-space:nowrap}
 .tb-metric-l{font-size:8px;letter-spacing:.8px;color:var(--t3);font-weight:700;text-transform:uppercase;margin-top:1px;white-space:nowrap}
 .tb-clock-wrap{padding:0 14px;border-left:1px solid var(--bd);display:flex;flex-direction:column;justify-content:center;align-items:flex-end}
-.tb-time{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--t);letter-spacing:.5px;white-space:nowrap}
-.tb-date{font-size:8px;color:var(--t3);letter-spacing:.5px;margin-top:1px;white-space:nowrap}
+.tb-time{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--t);letter-spacing:.5px;white-space:nowrap}
+.tb-date{font-size:10px;color:var(--t2);letter-spacing:.3px;margin-top:2px;white-space:nowrap;font-weight:500}
+.tb-fkey{
+  font-family:var(--mono);font-size:8px;font-weight:700;color:var(--t3);
+  background:var(--s3);border:1px solid var(--bd);border-radius:3px;
+  padding:1px 4px;margin-left:5px;letter-spacing:.5px;
+  vertical-align:middle;line-height:1.4;
+}
+.tb-tab.active .tb-fkey{color:var(--g);border-color:rgba(0,214,143,.3);background:rgba(0,214,143,.08)}
+.ph-shortcuts{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  padding:4px 10px;background:var(--bg);border-bottom:1px solid var(--bd);
+  flex-shrink:0;
+}
+.phs{font-size:9px;color:var(--t3);display:flex;align-items:center;gap:3px;font-weight:600}
+.phs kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:1px 4px;font-size:8px;font-family:var(--mono);color:var(--t3);font-weight:700}
 
 /* ── VIEWS ── */
 .view{display:none;height:100%;min-height:0}
@@ -513,11 +527,11 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
 <div class="topbar">
   <div class="tb-logo"><span class="tb-logo-dot"></span><span id="tb-store-name">My Store</span></div>
   <nav class="tb-nav">
-    <button class="tb-tab active" onclick="switchTab('pos')" id="tab-pos"><span class="tb-tab-icon">🧾</span>Register</button>
-    <button class="tb-tab" onclick="switchTab('inv')" id="tab-inv"><span class="tb-tab-icon">📦</span>Inventory</button>
-    <button class="tb-tab" onclick="switchTab('invl')" id="tab-invl"><span class="tb-tab-icon">🗂</span>Invoices</button>
-    <button class="tb-tab" onclick="switchTab('rep')" id="tab-rep"><span class="tb-tab-icon">📊</span>Reports</button>
-    <button class="tb-tab" onclick="switchTab('data')" id="tab-data"><span class="tb-tab-icon">⚙️</span>Data</button>
+    <button class="tb-tab active" onclick="switchTab('pos')" id="tab-pos"><span class="tb-tab-icon">🧾</span>Register<span class="tb-fkey">F4</span></button>
+    <button class="tb-tab" onclick="switchTab('inv')" id="tab-inv"><span class="tb-tab-icon">📦</span>Inventory<span class="tb-fkey">F5</span></button>
+    <button class="tb-tab" onclick="switchTab('invl')" id="tab-invl"><span class="tb-tab-icon">🗂</span>Invoices<span class="tb-fkey">F6</span></button>
+    <button class="tb-tab" onclick="switchTab('rep')" id="tab-rep"><span class="tb-tab-icon">📊</span>Reports<span class="tb-fkey">F7</span></button>
+    <button class="tb-tab" onclick="switchTab('data')" id="tab-data"><span class="tb-tab-icon">⚙️</span>Data<span class="tb-fkey">F8</span></button>
   </nav>
   <div class="tb-right">
     <div class="tb-metric"><span class="tb-metric-v" id="tb-sales">Rs 0.00</span><span class="tb-metric-l">Today's Sales</span></div>
@@ -536,6 +550,7 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
   <!-- DEPT PANEL -->
   <div class="panel" id="dept-panel">
     <div class="ph"><span class="ph-title">Departments</span><button class="btn btn-ghost btn-xs" onclick="openDeptForm()">＋</button></div>
+    <div class="ph-shortcuts"><span class="phs"><kbd>Enter</kbd>Select</span><span class="phs"><kbd>Esc</kbd>Back</span></div>
     <div class="dept-searchbox"><input id="dept-search" placeholder="Search…" oninput="filterDepts(this.value)" onkeydown="handleDeptSearchKey(event)"></div>
     <div class="panel-scroll"><div class="dept-list" id="dept-list"></div></div>
     <div class="pfoot" id="dept-form" style="display:none">
@@ -550,6 +565,7 @@ kbd{background:var(--s3);border:1px solid var(--bd2);border-radius:3px;padding:2
   <!-- REGISTER PANEL -->
   <div class="panel" id="reg-panel">
     <div class="ph"><span class="ph-title" id="reg-title">Register</span><span style="font-family:var(--mono);font-size:10px;color:var(--t3)" id="reg-count">0 items</span></div>
+    <div class="ph-shortcuts"><span class="phs"><kbd>Enter</kbd>Add</span><span class="phs"><kbd>⇧Enter</kbd>Checkout</span><span class="phs"><kbd>^⇧Enter</kbd>Complete</span><span class="phs"><kbd>Esc</kbd>Clear</span><span class="phs"><kbd>F2</kbd>New sale</span><span class="phs"><kbd>↑↓</kbd>Navigate</span></div>
     <div class="panel-scroll" id="reg-scroll">
 
       <div class="vfd" id="vfd">
@@ -1263,8 +1279,8 @@ async function saveStoreName(name) {
   await dbPut('config', {key:'storeName', value: storeName});
   toast('Store name saved', 'ok');
 }
-async function saveDepts() {
-  try { await dbPut('config', {key:'departments', value:departments}); }
+async function saveDepts(silent=false) {
+  try { await dbPut('config', {key:'departments', value:departments}, silent); }
   catch(e) { console.warn('saveDepts:', e.message); }
 }
 
@@ -2061,7 +2077,7 @@ async function exportCSV() {
   invs.sort((a,b)=>a.date-b.date).forEach(inv=>{
     csv+=[(inv.dateStr||new Date(toMs(inv.date)).toISOString()),(inv.items||[]).map(i=>i.dept||'').join(';'),(inv.items||[]).map(i=>(i.name||'').replace(/[|;]/g,' ')).join(';'),(inv.items||[]).map(i=>i.qty||0).join(';'),(inv.items||[]).map(i=>n2(i.price)).join(';'),n2(inv.subtotal),n2(inv.total),n2(inv.cash),n2(inv.change),n0(inv.discPct)].join(DELIM)+'\n';
   });
-  dlBlob(csv,'text/csv',`malik_invoices_${new Date().toISOString().slice(0,10)}.csv`);
+  dlBlob(csv,'text/csv',`${storeName.replace(/\s+/g,'-')}_invoices_${new Date().toISOString().slice(0,10)}.csv`);
   toast(`Exported ${invs.length} invoices`,'ok');
 }
 
@@ -2102,7 +2118,7 @@ async function clearInvoices() {
   toast('All invoices cleared','inf'); refreshDataView();
 }
 
-function exportProducts() { dlBlob(JSON.stringify(products,null,2),'application/json',`malik_products_${new Date().toISOString().slice(0,10)}.json`); toast('Products exported','ok'); }
+function exportProducts() { dlBlob(JSON.stringify(products,null,2),'application/json',`${storeName.replace(/\s+/g,'-')}_products_${new Date().toISOString().slice(0,10)}.json`); toast('Products exported','ok'); }
 
 async function importProducts(e) {
   const file=e.target.files[0]; if (!file) return;
@@ -2136,7 +2152,7 @@ function exportDepts() {
   if (!departments.length) { toast('No departments to export','err'); return; }
   const sorted = [...departments].sort((a,b)=>a.localeCompare(b));
   const csv = 'Department\n' + sorted.map(d=>d.replace(/,/g,' ')).join('\n') + '\n';
-  dlBlob(csv, 'text/csv', `malik_departments_${new Date().toISOString().slice(0,10)}.csv`);
+  dlBlob(csv, 'text/csv', `${storeName.replace(/\s+/g,'-')}_departments_${new Date().toISOString().slice(0,10)}.csv`);
   toast(`Exported ${sorted.length} departments`, 'ok');
 }
 
@@ -2150,7 +2166,7 @@ async function importDepts(e) {
     lines.forEach(name => {
       if (!departments.includes(name)) { departments.push(name); added++; }
     });
-    await saveDepts();
+    await saveDepts(true);
     renderDepts(); syncInvSelects(); refreshDataView();
     toast(`Imported ${added} new department${added!==1?'s':''} (${lines.length-added} already existed)`, 'ok');
   };
@@ -2171,9 +2187,11 @@ document.addEventListener('keydown', e => {
   if (e.ctrlKey && e.shiftKey && e.key==='Enter') { e.preventDefault(); completeCheckout(); }
   else if (e.ctrlKey && e.shiftKey && e.key==='P') { e.preventDefault(); printReceipt(); }
   else if (e.key==='F2') { e.preventDefault(); newSale(); }
+  else if (e.key==='F4') { e.preventDefault(); switchTab('pos'); }
   else if (e.key==='F5') { e.preventDefault(); switchTab('inv'); }
   else if (e.key==='F6') { e.preventDefault(); switchTab('invl'); }
   else if (e.key==='F7') { e.preventDefault(); switchTab('rep'); }
+  else if (e.key==='F8') { e.preventDefault(); switchTab('data'); }
 });
 
 init();
