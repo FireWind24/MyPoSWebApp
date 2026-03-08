@@ -2127,11 +2127,19 @@ async function importProducts(e) {
       if (!Array.isArray(data)) { toast('Invalid JSON','err'); return; }
       // Strip user_id, generate fresh id for each product so it works across accounts
       const clean = data.map(p => { const {id, user_id, ...rest} = p; return {...rest, id: `p_${Date.now()}_${Math.random().toString(36).slice(2,8)}`}; });
+      // Auto-create any departments from the JSON that don't exist yet
+      const newDepts = [...new Set(clean.map(p=>p.dept).filter(Boolean))]
+        .filter(d => !departments.includes(d));
+      if (newDepts.length) {
+        departments.push(...newDepts);
+        await saveDepts(true);
+        toast(`Also created ${newDepts.length} new department${newDepts.length!==1?'s':''}: ${newDepts.join(', ')}`, 'inf');
+      }
       toast(`Importing ${clean.length} products…`, 'inf');
       const saved = await dbBulkUpsert('products', clean);
       if (saved.length > 0) {
         products = await dbGetAll('products');
-        renderInventory(); renderDepts();
+        renderInventory(); renderDepts(); syncInvSelects();
         toast(`Imported ${saved.length} products`, 'ok'); refreshDataView();
       }
     } catch(err) { console.error(err); toast('Parse error: ' + err.message,'err'); }
