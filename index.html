@@ -2125,22 +2125,47 @@ async function importProducts(e) {
     try {
       const data=JSON.parse(ev.target.result);
       if (!Array.isArray(data)) { toast('Invalid JSON','err'); return; }
-      // Strip user_id, generate fresh id for each product so it works across accounts
-      const clean = data.map(p => { const {id, user_id, ...rest} = p; return {...rest, id: `p_${Date.now()}_${Math.random().toString(36).slice(2,8)}`}; });
-      // Auto-create any departments from the JSON that don't exist yet
-      const newDepts = [...new Set(clean.map(p=>p.dept).filter(Boolean))]
+
+      // Merge with existing products — match on name+dept (case-insensitive)
+      // Update price if exists, add new if not
+      let added=0, updated=0;
+      const toSave = [];
+      data.forEach(p => {
+        if (!p.name || !p.dept) return;
+        const existing = products.find(x =>
+          x.name.toLowerCase()===p.name.toLowerCase() && x.dept.toLowerCase()===p.dept.toLowerCase()
+        );
+        if (existing) {
+          // Update price if changed
+          if (n0(existing.price) !== n0(p.price)) {
+            const updated_prod = {...existing, price: n0(p.price)};
+            toSave.push(updated_prod);
+            updated++;
+          }
+          // else identical — skip
+        } else {
+          toSave.push({...p, id:`p_${Date.now()}_${Math.random().toString(36).slice(2,8)}`, price:n0(p.price)});
+          added++;
+        }
+      });
+
+      // Auto-create missing departments
+      const newDepts = [...new Set(data.map(p=>p.dept).filter(Boolean))]
         .filter(d => !departments.includes(d));
       if (newDepts.length) {
         departments.push(...newDepts);
         await saveDepts(true);
-        toast(`Also created ${newDepts.length} new department${newDepts.length!==1?'s':''}: ${newDepts.join(', ')}`, 'inf');
+        toast(`Created ${newDepts.length} new dept${newDepts.length!==1?'s':''}: ${newDepts.join(', ')}`, 'inf');
       }
-      toast(`Importing ${clean.length} products…`, 'inf');
-      const saved = await dbBulkUpsert('products', clean);
+
+      if (!toSave.length) { toast('Nothing new — all products already up to date', 'inf'); return; }
+
+      toast(`Saving ${added} new + ${updated} updated…`, 'inf');
+      const saved = await dbBulkUpsert('products', toSave.map(p=>{ const {user_id,...rest}=p; return rest; }));
       if (saved.length > 0) {
         products = await dbGetAll('products');
         renderInventory(); renderDepts(); syncInvSelects();
-        toast(`Imported ${saved.length} products`, 'ok'); refreshDataView();
+        toast(`Done — ${added} added, ${updated} updated`, 'ok'); refreshDataView();
       }
     } catch(err) { console.error(err); toast('Parse error: ' + err.message,'err'); }
   };
