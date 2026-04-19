@@ -1804,16 +1804,6 @@ function pfNameHint() {
   const q = document.getElementById('pf-name').value.trim().toLowerCase();
   if (!q) return;
   const match = products.find(p => p.name.toLowerCase().startsWith(q));
-  if (match) {
-    const sel = document.getElementById('pf-dept');
-    if (sel.value !== match.dept) sel.value = match.dept;
-  }
-}
-
-function pfNameHint() {
-  const q = document.getElementById('pf-name').value.trim().toLowerCase();
-  if (!q) return;
-  const match = products.find(p => p.name.toLowerCase().startsWith(q));
   if (match) { const s=document.getElementById('pf-dept'); if(s.value!==match.dept) s.value=match.dept; }
 }
 
