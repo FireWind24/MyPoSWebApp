@@ -192,6 +192,18 @@ export function InvoiceGrid() {
       return
     }
 
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      if (index < rows.length - 1) { focusInput(index + 1, col); setFocusedRow(index + 1) }
+      return
+    }
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      if (index > 0) { focusInput(index - 1, col); setFocusedRow(index - 1) }
+      return
+    }
+
     if (e.key === 'Enter') {
       e.preventDefault()
       if (col === 'name' && !ac) {

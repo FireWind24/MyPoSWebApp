@@ -181,7 +181,12 @@ export function CheckoutModal() {
           </div>
         </div>
       ) : (
-        <>
+        <div onKeyDown={e => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault()
+            handleCheckout()
+          }
+        }}>
           <div className="checkout-tabs">
             {(['cash', 'card', 'split'] as const).map(m => (
               <div
@@ -291,7 +296,7 @@ export function CheckoutModal() {
               {processing ? 'Processing...' : `Complete Sale • ${total.toFixed(2)}`}
             </Button>
           </div>
-        </>
+        </div>
       )}
     </Modal>
   )
