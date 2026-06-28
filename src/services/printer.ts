@@ -183,6 +183,51 @@ export function printViaBrowser(lines: string[], title: string = 'Receipt') {
   }, 100)
 }
 
+export interface ReceiptStoreInfo {
+  name: string
+  address?: string
+  phone?: string
+  receipt_footer?: string
+}
+
+export function generateSaleReceipt(
+  items: { name: string; qty: number; total: number; dept?: string }[],
+  total: number,
+  opts?: { notes?: string; customerName?: string; store?: ReceiptStoreInfo }
+): string[] {
+  const lines: string[] = []
+  const s = opts?.store
+  lines.push('================================')
+  lines.push(`      ${(s?.name || 'SALE RECEIPT').toUpperCase()}`)
+  if (s?.address) lines.push(`  ${s.address}`)
+  if (s?.phone) lines.push(`  Tel: ${s.phone}`)
+  lines.push('================================')
+  lines.push('')
+  lines.push('Date: ' + new Date().toLocaleString())
+  if (opts?.customerName) lines.push('Customer: ' + opts.customerName)
+  lines.push('--------------------------------')
+  lines.push('Item                 Qty   Amount')
+  lines.push('--------------------------------')
+  for (const item of items) {
+    const name = item.name.length > 18 ? item.name.slice(0, 18) : item.name.padEnd(18)
+    const deptTag = item.dept && item.dept !== item.name ? `[${item.dept}]` : ''
+    lines.push(`${name} ${String(item.qty).padStart(3)} ${item.total.toFixed(2).padStart(8)}`)
+    if (deptTag) lines.push(`  ${deptTag}`)
+  }
+  lines.push('--------------------------------')
+  lines.push(`TOTAL:${total.toFixed(2).padStart(30)}`)
+  if (opts?.notes) lines.push(`Note: ${opts.notes}`)
+  lines.push('')
+  lines.push('================================')
+  if (s?.receipt_footer) {
+    lines.push(`  ${s.receipt_footer}`)
+    lines.push('')
+  }
+  lines.push('        Thank you!')
+  lines.push('================================')
+  return lines
+}
+
 export function generateTestReceipt(): string[] {
   const config = getPrinterConfig()
   const lines: string[] = []

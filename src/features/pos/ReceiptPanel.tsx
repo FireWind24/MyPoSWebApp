@@ -2,32 +2,8 @@ import { useCartStore } from '@stores/cartStore'
 import { useUIStore } from '@stores/uiStore'
 import { useSyncStore } from '@stores/syncStore'
 import { fmt } from '@shared/utils'
-import { printViaBrowser, generateTestReceipt } from '@services/printer'
-
-function generateReceiptLines(items: import('@shared/types').CartItem[], total: number, notes: string): string[] {
-  const lines: string[] = []
-  const now = new Date()
-  lines.push('==========================')
-  lines.push('      SALE RECEIPT')
-  lines.push('==========================')
-  lines.push('')
-  lines.push('Date: ' + now.toLocaleString())
-  lines.push('----------------------------')
-  lines.push('Item          Qty    Price')
-  lines.push('----------------------------')
-  for (const item of items) {
-    const name = item.name.length > 14 ? item.name.slice(0, 14) : item.name.padEnd(14)
-    lines.push(`${name} ${String(item.qty).padStart(3)} ${item.total.toFixed(2).padStart(8)}`)
-  }
-  lines.push('----------------------------')
-  lines.push(`TOTAL:${total.toFixed(2).padStart(25)}`)
-  lines.push('')
-  if (notes) lines.push(`Note: ${notes}`)
-  lines.push('==========================')
-  lines.push('   Thank you!')
-  lines.push('==========================')
-  return lines
-}
+import { printViaBrowser, generateTestReceipt, generateSaleReceipt } from '@services/printer'
+import { db } from '@db/schema'
 
 export function ReceiptPanel() {
   const items = useCartStore(s => s.items)
@@ -45,9 +21,11 @@ export function ReceiptPanel() {
   const subtotal = items.reduce((s, i) => s + i.total, 0)
   const total = subtotal
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (items.length === 0) return
-    const lines = generateReceiptLines(items, total, notes)
+    const stores = await db.stores.toArray()
+    const store = stores.length ? stores[0] : undefined
+    const lines = generateSaleReceipt(items, total, { notes, store: store ? { name: store.name, address: store.address, phone: store.phone, receipt_footer: store.receipt_footer } : undefined })
     printViaBrowser(lines, 'Sale Receipt')
     showToast('Receipt sent to printer', 'ok')
   }

@@ -132,28 +132,11 @@ function App() {
         e.preventDefault()
         const items = useCartStore.getState().items
         if (items.length > 0) {
-          import('@services/printer').then(({ printViaBrowser }) => {
-            const lines: string[] = []
-            const now = new Date().toLocaleString()
-            lines.push('==========================')
-            lines.push('      SALE RECEIPT')
-            lines.push('==========================')
-            lines.push('')
-            lines.push('Date: ' + now)
-            lines.push('----------------------------')
-            lines.push('Item          Qty    Price')
-            lines.push('----------------------------')
-            for (const item of items) {
-              const name = item.name.length > 14 ? item.name.slice(0, 14) : item.name.padEnd(14)
-              lines.push(`${name} ${String(item.qty).padStart(3)} ${item.total.toFixed(2).padStart(8)}`)
-            }
-            lines.push('----------------------------')
+          import('@services/printer').then(async ({ printViaBrowser, generateSaleReceipt }) => {
             const total = items.reduce((s, i) => s + i.total, 0)
-            lines.push(`TOTAL:${total.toFixed(2).padStart(25)}`)
-            lines.push('')
-            lines.push('==========================')
-            lines.push('   Thank you!')
-            lines.push('==========================')
+            const stores = await import('@db/schema').then(m => m.db.stores.toArray())
+            const store = stores.length ? stores[0] : undefined
+            const lines = generateSaleReceipt(items, total, { store: store ? { name: store.name, address: store.address, phone: store.phone, receipt_footer: store.receipt_footer } : undefined })
             printViaBrowser(lines, 'Sale Receipt')
             useUIStore.getState().showToast('Receipt sent to printer', 'ok')
           })

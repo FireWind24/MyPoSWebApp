@@ -311,6 +311,7 @@ body {
 .grid-table th.col-rate { width: 85px; text-align: right; }
 .grid-table th.col-qty { width: 65px; text-align: center; }
 .grid-table th.col-disc { width: 65px; text-align: center; }
+.grid-table th.col-dept { width: 80px; text-align: left; }
 .grid-table th.col-net { width: 100px; text-align: right; }
 
 .grid-table td {

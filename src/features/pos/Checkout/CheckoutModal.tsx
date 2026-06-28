@@ -3,7 +3,7 @@ import { useUIStore } from '@stores/uiStore'
 import { useCartStore } from '@stores/cartStore'
 import { db } from '@db/schema'
 import { generateId } from '@shared/utils'
-import { printViaBrowser } from '@services/printer'
+import { printViaBrowser, generateSaleReceipt } from '@services/printer'
 import { Modal } from '@shared/ui/Modal'
 import { Button } from '@shared/ui/Button'
 
@@ -61,31 +61,6 @@ export function CheckoutModal() {
     }
   }, [customerSearch])
 
-  const generateReceiptLines = (now: number): string[] => {
-    const lines: string[] = []
-    const nowStr = new Date(now).toLocaleString()
-    lines.push('==========================')
-    lines.push('      SALE RECEIPT')
-    lines.push('==========================')
-    lines.push('')
-    lines.push('Date: ' + nowStr)
-    lines.push('----------------------------')
-    lines.push('Item          Qty    Price')
-    lines.push('----------------------------')
-    for (const item of items) {
-      const name = item.name.length > 14 ? item.name.slice(0, 14) : item.name.padEnd(14)
-      lines.push(`${name} ${String(item.qty).padStart(3)} ${item.total.toFixed(2).padStart(8)}`)
-    }
-    lines.push('----------------------------')
-    lines.push(`TOTAL:${total.toFixed(2).padStart(25)}`)
-    if (customerName) lines.push(`Customer: ${customerName}`)
-    lines.push('')
-    lines.push('==========================')
-    lines.push('   Thank you!')
-    lines.push('==========================')
-    return lines
-  }
-
   const finishSale = () => {
     clearCart()
     setCash(0)
@@ -97,8 +72,10 @@ export function CheckoutModal() {
     showToast('Sale completed!', 'ok')
   }
 
-  const handlePrintAndFinish = () => {
-    const lines = generateReceiptLines(Date.now())
+  const handlePrintAndFinish = async () => {
+    const stores = await db.stores.toArray()
+    const store = stores.length ? stores[0] : undefined
+    const lines = generateSaleReceipt(items, total, { customerName, store: store ? { name: store.name, address: store.address, phone: store.phone, receipt_footer: store.receipt_footer } : undefined })
     printViaBrowser(lines, 'Sale Receipt')
     finishSale()
   }

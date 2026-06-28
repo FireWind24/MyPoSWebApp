@@ -35,7 +35,7 @@ interface ProductInfo {
 }
 
 interface AutocompleteState {
-  field: 'name' | 'code'
+  field: 'name' | 'code' | 'dept'
   rowIndex: number
   query: string
   results: ProductInfo[]
@@ -86,6 +86,12 @@ export function InvoiceGrid() {
 
   const filledRows = useMemo(() => rows.filter(r => r.productName.trim() !== ''), [rows])
 
+  const allDepts = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const p of allProducts) { if (p.dept) map.set(p.dept, (map.get(p.dept) || 0) + 1) }
+    return Array.from(map.entries()).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)
+  }, [allProducts])
+
   const computeNetValue = useCallback((rate: number, qty: number, disc: number) => {
     return rate * qty * (1 - disc / 100)
   }, [])
@@ -115,10 +121,10 @@ export function InvoiceGrid() {
   }, [computeNetValue, appendIfNeeded])
 
   const syncCart = useCallback((currentRows: GridRow[]) => {
-    const filled = currentRows.filter(r => r.productName.trim() !== '' && r.rate > 0)
-    useCartStore.setState({ items: filled.map(r => ({
-      dept: r.dept,
-      name: r.productName,
+    const valid = currentRows.filter(r => (r.productName.trim() !== '' || r.dept.trim() !== '') && r.rate > 0)
+    useCartStore.setState({ items: valid.map(r => ({
+      dept: r.dept || 'General',
+      name: r.productName.trim() || `[${r.dept}]`,
       price: r.rate,
       qty: r.qty,
       total: r.netValue,
@@ -158,6 +164,16 @@ export function InvoiceGrid() {
     setAc({ field: 'code', rowIndex: index, query: value, results: filtered.slice(0, 8), selectedIndex: 0, position: pos })
   }, [allProducts, updateRow, getCellPosition])
 
+  const handleDeptChange = useCallback((index: number, value: string) => {
+    updateRow(index, { dept: value })
+    if (!value.trim()) { setAc(null); return }
+    const pos = getCellPosition(index, 'dept')
+    if (!pos) return
+    const filtered = allDepts.filter(d => d.name.toLowerCase().includes(value.toLowerCase()))
+    const asProducts = filtered.map(d => ({ id: d.name, name: d.name, barcode: '', dept: d.name, price: 0, stock: 0 }))
+    setAc({ field: 'dept', rowIndex: index, query: value, results: asProducts.slice(0, 8), selectedIndex: 0, position: pos })
+  }, [allDepts, updateRow, getCellPosition])
+
   const fillRowFromProduct = useCallback((index: number, product: ProductInfo) => {
     updateRow(index, {
       productName: product.name,
@@ -181,7 +197,7 @@ export function InvoiceGrid() {
 
     if (e.key === 'Tab') {
       e.preventDefault()
-      const tabOrder = ['name', 'code', 'rate', 'qty', 'disc']
+      const tabOrder = ['name', 'code', 'rate', 'qty', 'disc', 'dept']
       const idx = tabOrder.indexOf(col)
       if (idx >= 0 && idx < tabOrder.length - 1) {
         focusInput(index, tabOrder[idx + 1])
@@ -293,6 +309,7 @@ export function InvoiceGrid() {
               <th className="col-rate">Rate</th>
               <th className="col-qty">Qty</th>
               <th className="col-disc">Disc%</th>
+              <th className="col-dept">Dept</th>
               <th className="col-net">Net Value</th>
             </tr>
           </thead>
@@ -381,6 +398,29 @@ export function InvoiceGrid() {
                     onFocus={e => { setFocusedRow(i); e.target.select() }}
                     onKeyDown={e => handleKeyDown(e, i, 'disc')}
                   />
+                </td>
+                <td style={{ position: 'relative' }}>
+                  <input
+                    ref={el => setInputRef(`dept_${i}`, el)}
+                    className="cell-input"
+                    value={row.dept}
+                    onChange={e => handleDeptChange(i, e.target.value)}
+                    onFocus={() => setFocusedRow(i)}
+                    onKeyDown={e => handleKeyDown(e, i, 'dept')}
+                    onBlur={() => setTimeout(() => setAc(prev => prev?.rowIndex === i && prev.field === 'dept' ? null : prev), 200)}
+                    placeholder="Dept"
+                  />
+                  {ac && ac.field === 'dept' && ac.rowIndex === i && (
+                    <div className="ac-dropdown" style={{ top: ac.position.top + 2, left: ac.position.left, width: Math.max(ac.position.width, 180) }}>
+                      {ac.results.length === 0 ? (
+                        <div className="ac-item" style={{ color: 'var(--t3)' }}>No departments found</div>
+                      ) : ac.results.map((d, idx) => (
+                        <div key={d.id} className={`ac-item ${idx === ac.selectedIndex ? 'focused' : ''}`} onMouseDown={() => { updateRow(i, { dept: d.name }); setAc(null); focusInput(i, 'dept') }}>
+                          <span className="ac-name">{d.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </td>
                 <td><span className="cell-readonly">{row.netValue.toFixed(2)}</span></td>
               </tr>

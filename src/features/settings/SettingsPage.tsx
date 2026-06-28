@@ -11,6 +11,9 @@ import type { SettingsTab } from '@shared/types'
 
 export function SettingsPage() {
   const [storeName, setStoreName] = useState('My Store')
+  const [storeAddress, setStoreAddress] = useState('')
+  const [storePhone, setStorePhone] = useState('')
+  const [receiptFooter, setReceiptFooter] = useState('')
   const [taxRate, setTaxRate] = useState(0)
   const [currency, setCurrency] = useState('Rs')
   const [subTab, setSubTab] = useState<SettingsTab>('store')
@@ -23,6 +26,9 @@ export function SettingsPage() {
         const stores = await db.stores.toArray()
         if (stores.length) {
           setStoreName(stores[0].name)
+          setStoreAddress(stores[0].address || '')
+          setStorePhone(stores[0].phone || '')
+          setReceiptFooter(stores[0].receipt_footer || '')
           setTaxRate(stores[0].tax_rate)
           setCurrency(stores[0].currency)
         }
@@ -34,16 +40,16 @@ export function SettingsPage() {
     try {
       const stores = await db.stores.toArray()
       if (stores.length) {
-        await db.stores.update(stores[0].id, { name: storeName, tax_rate: taxRate, currency })
+        await db.stores.update(stores[0].id, { name: storeName, address: storeAddress, phone: storePhone, receipt_footer: receiptFooter, tax_rate: taxRate, currency })
       } else {
         await db.stores.add({
           id: generateId(),
           name: storeName,
-          address: '',
-          phone: '',
+          address: storeAddress,
+          phone: storePhone,
           tax_rate: taxRate,
           currency,
-          receipt_footer: '',
+          receipt_footer: receiptFooter,
         })
       }
       showToast('Settings saved', 'ok')
@@ -143,24 +149,36 @@ export function SettingsPage() {
         return (
           <>
             {subTab === 'store' && (
-              <div className="section">
-                <h3>Store Settings</h3>
-                <div className="form-group">
-                  <label>Store Name</label>
-                  <input value={storeName} onChange={e => setStoreName(e.target.value)} />
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div className="section">
+                  <h3>Store Settings</h3>
                   <div className="form-group">
-                    <label>Tax Rate (%)</label>
-                    <input type="number" value={taxRate || ''} onChange={e => setTaxRate(parseFloat(e.target.value) || 0)} />
+                    <label>Store Name</label>
+                    <input value={storeName} onChange={e => setStoreName(e.target.value)} />
                   </div>
                   <div className="form-group">
-                    <label>Currency Symbol</label>
-                    <input value={currency} onChange={e => setCurrency(e.target.value)} />
+                    <label>Address</label>
+                    <input value={storeAddress} onChange={e => setStoreAddress(e.target.value)} />
                   </div>
+                  <div className="form-group">
+                    <label>Phone</label>
+                    <input value={storePhone} onChange={e => setStorePhone(e.target.value)} />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <div className="form-group">
+                      <label>Tax Rate (%)</label>
+                      <input type="number" value={taxRate || ''} onChange={e => setTaxRate(parseFloat(e.target.value) || 0)} />
+                    </div>
+                    <div className="form-group">
+                      <label>Currency Symbol</label>
+                      <input value={currency} onChange={e => setCurrency(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Receipt Footer</label>
+                    <input value={receiptFooter} onChange={e => setReceiptFooter(e.target.value)} placeholder="Thank you for your visit!" />
+                  </div>
+                  <Button variant="primary" size="sm" onClick={handleSaveStore}>Save Settings</Button>
                 </div>
-                <Button variant="primary" size="sm" onClick={handleSaveStore}>Save Settings</Button>
-              </div>
             )}
             {subTab === 'data' && (
               <div className="section">
