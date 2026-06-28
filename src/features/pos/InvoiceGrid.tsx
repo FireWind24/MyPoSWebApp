@@ -3,37 +3,39 @@ import { db } from '@db/schema'
 import { useCartStore } from '@stores/cartStore'
 import { useUIStore } from '@stores/uiStore'
 
-
 let rowIdCounter = 0
 function newRowId() { return `r_${++rowIdCounter}` }
 
 export interface GridRow {
   id: string
   productName: string
-  stock: number
+  code: string
+  balance: number
   rate: number
   qty: number
-  discPct: number
+  disc: number
   netValue: number
   dept: string
   productId: string
 }
 
 function blankRow(): GridRow {
-  return { id: newRowId(), productName: '', stock: 0, rate: 0, qty: 1, discPct: 0, netValue: 0, dept: '', productId: '' }
+  return { id: newRowId(), productName: '', code: '', balance: 0, rate: 0, qty: 1, disc: 0, netValue: 0, dept: '', productId: '' }
 }
 
 function createBlankRows(n: number): GridRow[] {
   return Array.from({ length: n }, () => blankRow())
 }
 
-const EMPTY_THRESHOLD = 3
+const INITIAL_ROWS = 6
+const APPEND_THRESHOLD = 2
 
 interface ProductInfo {
-  id: string; name: string; dept: string; price: number; stock: number
+  id: string; name: string; barcode: string; dept: string; price: number; stock: number
 }
 
 interface AutocompleteState {
+  field: 'name' | 'code'
   rowIndex: number
   query: string
   results: ProductInfo[]
@@ -42,11 +44,11 @@ interface AutocompleteState {
 }
 
 export function InvoiceGrid() {
-  const [rows, setRows] = useState<GridRow[]>(() => createBlankRows(15))
+  const [rows, setRows] = useState<GridRow[]>(() => createBlankRows(INITIAL_ROWS))
   const [focusedRow, setFocusedRow] = useState<number | null>(null)
   const [ac, setAc] = useState<AutocompleteState | null>(null)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; rowIndex: number } | null>(null)
-  const [billDiscPct, setBillDiscPct] = useState(0)
+  const [billDisc, setBillDisc] = useState(0)
   const [customerName, setCustomerName] = useState('')
   const [allProducts, setAllProducts] = useState<ProductInfo[]>([])
   const tableWrapRef = useRef<HTMLDivElement>(null)
@@ -60,7 +62,7 @@ export function InvoiceGrid() {
     const load = async () => {
       try {
         const all = await db.products.toArray()
-        setAllProducts(all.filter(p => p.price > 0).map(p => ({ id: p.id, name: p.name, dept: p.dept, price: p.price, stock: p.stock })))
+        setAllProducts(all.filter(p => p.price > 0).map(p => ({ id: p.id, name: p.name, barcode: p.barcode || '', dept: p.dept, price: p.price, stock: p.stock })))
       } catch { }
     }
     load()
@@ -70,14 +72,14 @@ export function InvoiceGrid() {
 
   const filledRows = useMemo(() => rows.filter(r => r.productName.trim() !== ''), [rows])
 
-  const computeNetValue = useCallback((rate: number, qty: number, discPct: number) => {
-    return rate * qty * (1 - discPct / 100)
+  const computeNetValue = useCallback((rate: number, qty: number, disc: number) => {
+    return rate * qty * (1 - disc / 100)
   }, [])
 
-  const ensureBlankRows = useCallback((currentRows: GridRow[]): GridRow[] => {
+  const appendIfNeeded = useCallback((currentRows: GridRow[]): GridRow[] => {
     const emptyCount = currentRows.filter(r => r.productName.trim() === '').length
-    if (emptyCount < EMPTY_THRESHOLD) {
-      return [...currentRows, ...createBlankRows(5)]
+    if (emptyCount < APPEND_THRESHOLD) {
+      return [...currentRows, ...createBlankRows(3)]
     }
     return currentRows
   }, [])
@@ -86,17 +88,17 @@ export function InvoiceGrid() {
     setRows(prev => {
       const updated = [...prev]
       const row = { ...updated[index], ...partial }
-      if (partial.rate !== undefined || partial.qty !== undefined || partial.discPct !== undefined) {
+      if (partial.rate !== undefined || partial.qty !== undefined || partial.disc !== undefined) {
         row.netValue = computeNetValue(
           partial.rate ?? row.rate,
           partial.qty ?? row.qty,
-          partial.discPct ?? row.discPct
+          partial.disc ?? row.disc
         )
       }
       updated[index] = row
-      return ensureBlankRows(updated)
+      return appendIfNeeded(updated)
     })
-  }, [computeNetValue, ensureBlankRows])
+  }, [computeNetValue, appendIfNeeded])
 
   const syncCart = useCallback((currentRows: GridRow[]) => {
     const filled = currentRows.filter(r => r.productName.trim() !== '' && r.rate > 0)
@@ -113,85 +115,90 @@ export function InvoiceGrid() {
     syncCart(rows)
   }, [rows, syncCart])
 
-  const handleProductNameChange = useCallback((index: number, value: string) => {
-    updateRow(index, { productName: value })
-    if (!value.trim()) {
-      setAc(null)
-      return
-    }
-    const input = inputRefs.current.get(`name_${index}`)
-    if (!input) return
+  const focusInput = useCallback((row: number, col: string) => {
+    setTimeout(() => inputRefs.current.get(`${col}_${row}`)?.focus(), 0)
+  }, [])
+
+  const getCellPosition = useCallback((rowIndex: number, col: string) => {
+    const input = inputRefs.current.get(`${col}_${rowIndex}`)
+    if (!input) return null
     const rect = input.getBoundingClientRect()
     const wrapRect = tableWrapRef.current?.getBoundingClientRect()
-    if (!wrapRect) return
-    const filtered = allProducts.filter(p => p.name.toLowerCase().includes(value.toLowerCase()))
-    setAc({
-      rowIndex: index,
-      query: value,
-      results: filtered.slice(0, 8),
-      selectedIndex: 0,
-      position: {
-        top: rect.bottom - wrapRect.top + tableWrapRef.current!.scrollTop,
-        left: rect.left - wrapRect.left,
-        width: rect.width,
-      },
-    })
-  }, [allProducts, updateRow])
+    if (!wrapRect) return null
+    return {
+      top: rect.bottom - wrapRect.top + tableWrapRef.current!.scrollTop,
+      left: rect.left - wrapRect.left,
+      width: rect.width,
+    }
+  }, [])
 
-  const selectProduct = useCallback((index: number, product: ProductInfo) => {
+  const handleNameChange = useCallback((index: number, value: string) => {
+    updateRow(index, { productName: value })
+    if (!value.trim()) { setAc(prev => prev?.rowIndex === index && prev.field === 'name' ? null : prev); return }
+    const pos = getCellPosition(index, 'name')
+    if (!pos) return
+    const filtered = allProducts.filter(p => p.name.toLowerCase().includes(value.toLowerCase()))
+    setAc(prev => prev?.field === 'name' && prev.rowIndex === index && prev.query === value ? prev : {
+      field: 'name', rowIndex: index, query: value, results: filtered.slice(0, 8), selectedIndex: 0, position: pos,
+    })
+  }, [allProducts, updateRow, getCellPosition])
+
+  const handleCodeChange = useCallback((index: number, value: string) => {
+    updateRow(index, { code: value })
+    if (!value.trim()) { setAc(prev => prev?.rowIndex === index && prev.field === 'code' ? null : prev); return }
+    const pos = getCellPosition(index, 'code')
+    if (!pos) return
+    const filtered = allProducts.filter(p => p.barcode && p.barcode.toLowerCase().includes(value.toLowerCase()))
+    setAc(prev => prev?.field === 'code' && prev.rowIndex === index && prev.query === value ? prev : {
+      field: 'code', rowIndex: index, query: value, results: filtered.slice(0, 8), selectedIndex: 0, position: pos,
+    })
+  }, [allProducts, updateRow, getCellPosition])
+
+  const fillRowFromProduct = useCallback((index: number, product: ProductInfo) => {
     updateRow(index, {
       productName: product.name,
-      stock: product.stock,
+      code: product.barcode || '',
+      balance: product.stock,
       rate: product.price,
       dept: product.dept,
       productId: product.id,
     })
     setAc(null)
-    setTimeout(() => {
-      const qtyInput = inputRefs.current.get(`qty_${index}`)
-      qtyInput?.focus()
-    }, 0)
-  }, [updateRow])
+    focusInput(index, 'code')
+  }, [updateRow, focusInput])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent, index: number, col: string) => {
     if (ac && ac.rowIndex === index) {
       if (e.key === 'ArrowDown') { e.preventDefault(); setAc(prev => prev ? { ...prev, selectedIndex: Math.min(prev.selectedIndex + 1, prev.results.length - 1) } : null); return }
       if (e.key === 'ArrowUp') { e.preventDefault(); setAc(prev => prev ? { ...prev, selectedIndex: Math.max(prev.selectedIndex - 1, 0) } : null); return }
-      if (e.key === 'Enter' && ac.results[ac.selectedIndex]) { e.preventDefault(); selectProduct(index, ac.results[ac.selectedIndex]); return }
+      if ((e.key === 'Enter' || e.key === 'Tab') && ac.results[ac.selectedIndex]) { e.preventDefault(); fillRowFromProduct(index, ac.results[ac.selectedIndex]); return }
       if (e.key === 'Escape') { e.preventDefault(); setAc(null); return }
-      if (e.key === 'Tab') {
-        e.preventDefault()
-        selectProduct(index, ac.results[ac.selectedIndex])
-        return
-      }
     }
 
     if (e.key === 'Tab') {
       e.preventDefault()
-      const tabOrder = ['name', 'qty', 'disc']
+      const tabOrder = ['name', 'code', 'rate', 'qty', 'disc']
       const idx = tabOrder.indexOf(col)
       if (idx >= 0 && idx < tabOrder.length - 1) {
-        const nextCol = tabOrder[idx + 1]
-        setTimeout(() => {
-          inputRefs.current.get(`${nextCol}_${index}`)?.focus()
-        }, 0)
-      } else if (idx === tabOrder.length - 1) {
-        setTimeout(() => {
-          inputRefs.current.get(`name_${index + 1}`)?.focus()
-          setFocusedRow(index + 1)
-        }, 0)
+        focusInput(index, tabOrder[idx + 1])
+      } else {
+        focusInput(index + 1, 'name')
+        setFocusedRow(index + 1)
       }
       return
     }
 
-    if (e.key === 'Enter' && col === 'name' && !ac) {
+    if (e.key === 'Enter') {
       e.preventDefault()
-      const val = rows[index].productName.trim()
-      if (!val) return
-      const exact = allProducts.find(p => p.name.toLowerCase() === val.toLowerCase())
-      if (exact) {
-        selectProduct(index, exact)
+      if (col === 'name' && !ac) {
+        const val = rows[index].productName.trim()
+        if (val) {
+          const exact = allProducts.find(p => p.name.toLowerCase() === val.toLowerCase())
+          if (exact) { fillRowFromProduct(index, exact); return }
+        }
       }
+      focusInput(index + 1, 'name')
+      setFocusedRow(index + 1)
       return
     }
 
@@ -199,19 +206,16 @@ export function InvoiceGrid() {
       updateRow(index, blankRow())
       return
     }
-  }, [ac, rows, allProducts, selectProduct, updateRow])
+  }, [ac, rows, allProducts, fillRowFromProduct, updateRow, focusInput])
 
   const focusFirstEmpty = useCallback(() => {
     const idx = rows.findIndex(r => r.productName.trim() === '')
-    if (idx >= 0) {
-      setFocusedRow(idx)
-      setTimeout(() => inputRefs.current.get(`name_${idx}`)?.focus(), 0)
-    }
-  }, [rows])
+    if (idx >= 0) { setFocusedRow(idx); focusInput(idx, 'name') }
+  }, [rows, focusInput])
 
   const handleNewSale = useCallback(() => {
-    setRows(createBlankRows(15))
-    setBillDiscPct(0)
+    setRows(createBlankRows(INITIAL_ROWS))
+    setBillDisc(0)
     setCustomerName('')
     setAc(null)
     clearCartStore()
@@ -225,10 +229,7 @@ export function InvoiceGrid() {
   }, [filledRows, setShowCheckout])
 
   const handleSrClick = useCallback((index: number) => {
-    if (rows[index].productName.trim()) {
-      rows[index].productName = ''
-      updateRow(index, blankRow())
-    }
+    if (rows[index].productName.trim()) { updateRow(index, blankRow()) }
   }, [rows, updateRow])
 
   const handleContextMenu = useCallback((e: React.MouseEvent, index: number) => {
@@ -249,7 +250,7 @@ export function InvoiceGrid() {
   }, [updateRow])
 
   const subtotal = useMemo(() => filledRows.reduce((s, r) => s + r.netValue, 0), [filledRows])
-  const billDiscAmt = subtotal * (billDiscPct / 100)
+  const billDiscAmt = subtotal * (billDisc / 100)
   const total = subtotal - billDiscAmt
   const totalQty = useMemo(() => filledRows.reduce((s, r) => s + r.qty, 0), [filledRows])
 
@@ -260,12 +261,7 @@ export function InvoiceGrid() {
   return (
     <div className="invoice-grid-area">
       <div className="grid-toolbar">
-        <input
-          placeholder="Customer name..."
-          value={customerName}
-          onChange={e => setCustomerName(e.target.value)}
-          style={{ maxWidth: 200 }}
-        />
+        <input placeholder="Customer name..." value={customerName} onChange={e => setCustomerName(e.target.value)} style={{ maxWidth: 200 }} />
         <span style={{ flex: 1 }} />
         <button className="btn btn-ghost btn-sm" onClick={handleNewSale}>New Sale (F2)</button>
       </div>
@@ -276,7 +272,8 @@ export function InvoiceGrid() {
             <tr>
               <th className="col-sr">#</th>
               <th className="col-name">Product Name</th>
-              <th className="col-stock">Stock</th>
+              <th className="col-code">Code</th>
+              <th className="col-balance">Balance</th>
               <th className="col-rate">Rate</th>
               <th className="col-qty">Qty</th>
               <th className="col-disc">Disc%</th>
@@ -288,12 +285,7 @@ export function InvoiceGrid() {
               <tr
                 key={row.id}
                 className={`${row.productName.trim() ? 'filled' : ''} ${focusedRow === i ? 'focused' : ''}`}
-                onClick={() => {
-                  setFocusedRow(i)
-                  if (!row.productName.trim()) {
-                    setTimeout(() => inputRefs.current.get(`name_${i}`)?.focus(), 0)
-                  }
-                }}
+                onClick={() => { setFocusedRow(i); if (!row.productName.trim()) focusInput(i, 'name') }}
                 onContextMenu={e => handleContextMenu(e, i)}
               >
                 <td className="sr-cell" onClick={() => handleSrClick(i)}>{i + 1}</td>
@@ -301,28 +293,16 @@ export function InvoiceGrid() {
                   <input
                     ref={el => setInputRef(`name_${i}`, el)}
                     className="cell-input"
-                    placeholder=""
                     value={row.productName}
-                    onChange={e => handleProductNameChange(i, e.target.value)}
+                    onChange={e => handleNameChange(i, e.target.value)}
                     onFocus={() => setFocusedRow(i)}
                     onKeyDown={e => handleKeyDown(e, i, 'name')}
-                    onBlur={() => setTimeout(() => setAc(prev => prev?.rowIndex === i ? null : prev), 200)}
+                    onBlur={() => setTimeout(() => setAc(prev => prev?.rowIndex === i && prev.field === 'name' ? null : prev), 200)}
                   />
-                  {ac && ac.rowIndex === i && (
-                    <div
-                      className="ac-dropdown"
-                      style={{
-                        top: ac.position.top + 2,
-                        left: ac.position.left,
-                        width: ac.position.width + 160,
-                      }}
-                    >
+                  {ac && ac.field === 'name' && ac.rowIndex === i && (
+                    <div className="ac-dropdown" style={{ top: ac.position.top + 2, left: Math.max(0, ac.position.left - 20), width: 320 }}>
                       {ac.results.map((p, idx) => (
-                        <div
-                          key={p.id}
-                          className={`ac-item ${idx === ac.selectedIndex ? 'focused' : ''}`}
-                          onMouseDown={() => selectProduct(i, p)}
-                        >
+                        <div key={p.id} className={`ac-item ${idx === ac.selectedIndex ? 'focused' : ''}`} onMouseDown={() => fillRowFromProduct(i, p)}>
                           <span className="ac-name">{p.name}</span>
                           <span className="ac-dept">{p.dept}</span>
                           <span className="ac-price">Rs {p.price.toFixed(2)}</span>
@@ -331,33 +311,46 @@ export function InvoiceGrid() {
                     </div>
                   )}
                 </td>
-                <td><span className="cell-readonly">{row.stock > 0 ? row.stock : ''}</span></td>
+                <td style={{ position: 'relative' }}>
+                  <input
+                    ref={el => setInputRef(`code_${i}`, el)}
+                    className="cell-input"
+                    value={row.code}
+                    onChange={e => handleCodeChange(i, e.target.value)}
+                    onFocus={() => setFocusedRow(i)}
+                    onKeyDown={e => handleKeyDown(e, i, 'code')}
+                    onBlur={() => setTimeout(() => setAc(prev => prev?.rowIndex === i && prev.field === 'code' ? null : prev), 200)}
+                  />
+                  {ac && ac.field === 'code' && ac.rowIndex === i && (
+                    <div className="ac-dropdown" style={{ top: ac.position.top + 2, left: ac.position.left, width: ac.position.width + 120 }}>
+                      {ac.results.map((p, idx) => (
+                        <div key={p.id} className={`ac-item ${idx === ac.selectedIndex ? 'focused' : ''}`} onMouseDown={() => fillRowFromProduct(i, p)}>
+                          <span className="ac-name">{p.name}</span>
+                          <span className="ac-dept">{p.dept}</span>
+                          <span className="ac-price">Rs {p.price.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </td>
+                <td><span className="cell-readonly">{row.balance > 0 ? row.balance : ''}</span></td>
                 <td>
                   <input
                     ref={el => setInputRef(`rate_${i}`, el)}
                     className="cell-input num"
                     value={row.rate || ''}
-                    onChange={e => {
-                      const v = parseFloat(e.target.value) || 0
-                      updateRow(i, { rate: v })
-                    }}
+                    onChange={e => { const v = parseFloat(e.target.value) || 0; updateRow(i, { rate: v }) }}
                     onFocus={() => setFocusedRow(i)}
-                    onKeyDown={e => {
-                      if (e.key === 'Tab') { e.preventDefault(); setTimeout(() => inputRefs.current.get(`qty_${i}`)?.focus(), 0) }
-                    }}
+                    onKeyDown={e => { if (e.key === 'Tab') { e.preventDefault(); focusInput(i, 'qty') } }}
                   />
                 </td>
                 <td>
                   <input
                     ref={el => setInputRef(`qty_${i}`, el)}
                     className="cell-input num"
-                    type="number"
-                    min="1"
+                    type="number" min="1"
                     value={row.qty || ''}
-                    onChange={e => {
-                      const v = Math.max(1, parseInt(e.target.value) || 1)
-                      updateRow(i, { qty: v })
-                    }}
+                    onChange={e => { const v = Math.max(1, parseInt(e.target.value) || 1); updateRow(i, { qty: v }) }}
                     onFocus={() => setFocusedRow(i)}
                     onKeyDown={e => handleKeyDown(e, i, 'qty')}
                   />
@@ -366,14 +359,9 @@ export function InvoiceGrid() {
                   <input
                     ref={el => setInputRef(`disc_${i}`, el)}
                     className="cell-input num"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={row.discPct || ''}
-                    onChange={e => {
-                      const v = Math.min(100, Math.max(0, parseFloat(e.target.value) || 0))
-                      updateRow(i, { discPct: v })
-                    }}
+                    type="number" min="0" max="100"
+                    value={row.disc || ''}
+                    onChange={e => { const v = Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)); updateRow(i, { disc: v }) }}
                     onFocus={() => setFocusedRow(i)}
                     onKeyDown={e => handleKeyDown(e, i, 'disc')}
                   />
@@ -395,25 +383,14 @@ export function InvoiceGrid() {
         <div className="stat"><span className="lbl">Items</span><span className="val">{filledRows.length}</span></div>
         <div className="stat"><span className="lbl">Total Qty</span><span className="val">{totalQty}</span></div>
         <div className="stat"><span className="lbl">Subtotal</span><span className="val">Rs {subtotal.toFixed(2)}</span></div>
-        {billDiscPct > 0 && (
-          <div className="stat"><span className="lbl">Disc</span><span className="val" style={{ color: 'var(--r)' }}>-Rs {billDiscAmt.toFixed(2)}</span></div>
-        )}
+        {billDisc > 0 && <div className="stat"><span className="lbl">Disc</span><span className="val" style={{ color: 'var(--r)' }}>-Rs {billDiscAmt.toFixed(2)}</span></div>}
         <div className="stat" style={{ borderRight: 'none' }}>
           <span className="lbl">Disc %</span>
-          <input
-            className="disc-inp"
-            type="number"
-            min="0"
-            max="100"
-            value={billDiscPct || ''}
-            onChange={e => setBillDiscPct(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
-          />
+          <input className="disc-inp" type="number" min="0" max="100" value={billDisc || ''} onChange={e => setBillDisc(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))} />
         </div>
         <div className="stat"><span className="lbl">Total</span><span className="val" style={{ fontSize: '.85rem' }}>Rs {total.toFixed(2)}</span></div>
         <div className="footer-actions">
-          <button className="btn btn-primary btn-sm" disabled={filledRows.length === 0} onClick={handleCheckout}>
-            Checkout • Rs {total.toFixed(2)}
-          </button>
+          <button className="btn btn-primary btn-sm" disabled={filledRows.length === 0} onClick={handleCheckout}>Checkout • Rs {total.toFixed(2)}</button>
           <button className="btn btn-ghost btn-sm" onClick={handleNewSale}>New Sale</button>
         </div>
       </div>
