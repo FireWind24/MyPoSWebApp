@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { db } from '@db/schema'
-import { generateId, fmt } from '@shared/utils'
+import { generateId, fmt, toCsv, parseCsv, pickFile, dlBlob } from '@shared/utils'
 import { useUIStore } from '@stores/uiStore'
 import { Button } from '@shared/ui/Button'
 import { Modal } from '@shared/ui/Modal'
@@ -33,6 +33,8 @@ export function InventoryPage() {
   const [adjForm, setAdjForm] = useState({ delta: 0, reason: 'adjusted' as StockMovement['reason'], notes: '' })
 
   const [form, setForm] = useState({ name: '', barcode: '', dept: '', price: 0, cost_price: 0, stock: 0, min_stock: 0, unit: '', image_url: '', expiry_date: '' })
+  const [showImportResult, setShowImportResult] = useState(false)
+  const [importResult, setImportResult] = useState<{ created: number; updated: number; skipped: number; errors: string[] }>({ created: 0, updated: 0, skipped: 0, errors: [] })
   const showToast = useUIStore(s => s.showToast)
 
   useEffect(() => {
@@ -44,6 +46,97 @@ export function InventoryPage() {
       const all = await db.products.toArray()
       setProducts(all)
     } catch { }
+  }
+
+  const CSV_HEADERS = ['Name', 'Barcode', 'Department', 'Price', 'Cost Price', 'Stock', 'Min Stock', 'Unit', 'Expiry Date']
+
+  const productToRow = (p: Product): string[] => [
+    p.name, p.barcode || '', p.dept || '',
+    String(p.price), String(p.cost_price || ''),
+    String(p.stock), String(p.min_stock || ''),
+    p.unit || '', p.expiry_date || '',
+  ]
+
+  const handleExportCsv = () => {
+    const rows = products.map(productToRow)
+    const csv = toCsv(CSV_HEADERS, rows)
+    dlBlob(csv, 'text/csv', `inventory-${new Date().toISOString().slice(0, 10)}.csv`)
+    showToast('Inventory exported', 'ok')
+  }
+
+  const handleDownloadTemplate = () => {
+    const csv = toCsv(CSV_HEADERS, [])
+    dlBlob(csv, 'text/csv', 'inventory-template.csv')
+    showToast('Template downloaded', 'ok')
+  }
+
+  const handleImportCsv = async () => {
+    const file = await pickFile('.csv')
+    if (!file) return
+    try {
+      const { headers, rows } = parseCsv(file.text)
+      // Validate headers: need at least Name
+      const nameIdx = headers.findIndex(h => h.toLowerCase() === 'name')
+      if (nameIdx < 0) { showToast('CSV must have a "Name" column', 'err'); return }
+
+      const barcodeIdx = headers.findIndex(h => h.toLowerCase() === 'barcode')
+      const deptIdx = headers.findIndex(h => h.toLowerCase() === 'department')
+      const priceIdx = headers.findIndex(h => h.toLowerCase() === 'price')
+      const costIdx = headers.findIndex(h => h.toLowerCase() === 'cost price')
+      const stockIdx = headers.findIndex(h => h.toLowerCase() === 'stock')
+      const minStockIdx = headers.findIndex(h => h.toLowerCase() === 'min stock')
+      const unitIdx = headers.findIndex(h => h.toLowerCase() === 'unit')
+      const expiryIdx = headers.findIndex(h => h.toLowerCase() === 'expiry date')
+
+      const result = { created: 0, updated: 0, skipped: 0, errors: [] as string[] }
+
+      for (let ri = 0; ri < rows.length; ri++) {
+        const row = rows[ri]
+        try {
+          const name = (row[nameIdx] || '').trim()
+          if (!name) { result.skipped++; continue }
+
+          const barcode = barcodeIdx >= 0 ? (row[barcodeIdx] || '').trim() : ''
+          const dept = deptIdx >= 0 ? (row[deptIdx] || '').trim() : 'General'
+          const price = priceIdx >= 0 ? parseFloat(row[priceIdx]) || 0 : 0
+          const cost_price = costIdx >= 0 ? parseFloat(row[costIdx]) || 0 : 0
+          const stock = stockIdx >= 0 ? parseInt(row[stockIdx]) || 0 : 0
+          const min_stock = minStockIdx >= 0 ? parseInt(row[minStockIdx]) || 0 : 0
+          const unit = unitIdx >= 0 ? (row[unitIdx] || '').trim() : ''
+          const expiry_date = expiryIdx >= 0 ? (row[expiryIdx] || '').trim() : ''
+
+          // Try to match by barcode first, then by name
+          const existing = barcode
+            ? await db.products.where('barcode').equals(barcode).first()
+            : null
+          const match = existing || (await db.products.where('name').equals(name).first())
+
+          if (match) {
+            await db.products.update(match.id, {
+              name, barcode, dept, price, cost_price, stock, min_stock, unit,
+              expiry_date: expiry_date || undefined,
+            })
+            result.updated++
+          } else {
+            await db.products.add({
+              id: generateId(),
+              name, barcode, dept, price, cost_price, stock, min_stock, unit,
+              image_url: '', expiry_date: expiry_date || undefined,
+            })
+            result.created++
+          }
+        } catch (err) {
+          result.errors.push(`Row ${ri + 2}: ${err}`)
+        }
+      }
+
+      setImportResult(result)
+      setShowImportResult(true)
+      loadProducts()
+      showToast(`Imported: ${result.created} created, ${result.updated} updated, ${result.skipped} skipped`, 'ok')
+    } catch {
+      showToast('Failed to parse CSV file', 'err')
+    }
   }
 
   const filtered = search
@@ -216,6 +309,9 @@ export function InventoryPage() {
           </Button>
         )}
         <Button variant="primary" size="sm" onClick={openAdd}>+ Add Product</Button>
+        <Button variant="ghost" size="sm" onClick={handleExportCsv} disabled={products.length === 0}>Export CSV</Button>
+        <Button variant="ghost" size="sm" onClick={handleImportCsv}>Import CSV</Button>
+        <Button variant="ghost" size="sm" onClick={handleDownloadTemplate}>Template</Button>
       </div>
 
       <div className="inv-table-wrap">
@@ -453,6 +549,34 @@ export function InventoryPage() {
             </tbody>
           </table>
         )}
+      </Modal>
+
+      {/* Import Result Modal */}
+      <Modal open={showImportResult} onClose={() => setShowImportResult(false)} title="Import Results" narrow>
+        <div style={{ padding: '8px 0' }}>
+          <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
+            <div style={{ textAlign: 'center', flex: 1, background: 'var(--s2)', borderRadius: 6, padding: '10px 0' }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--g)' }}>{importResult.created}</div>
+              <div style={{ fontSize: 10, color: 'var(--t3)' }}>Created</div>
+            </div>
+            <div style={{ textAlign: 'center', flex: 1, background: 'var(--s2)', borderRadius: 6, padding: '10px 0' }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--b)' }}>{importResult.updated}</div>
+              <div style={{ fontSize: 10, color: 'var(--t3)' }}>Updated</div>
+            </div>
+            <div style={{ textAlign: 'center', flex: 1, background: 'var(--s2)', borderRadius: 6, padding: '10px 0' }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--t3)' }}>{importResult.skipped}</div>
+              <div style={{ fontSize: 10, color: 'var(--t3)' }}>Skipped</div>
+            </div>
+          </div>
+          {importResult.errors.length > 0 && (
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--r)', marginBottom: 4 }}>Errors:</div>
+              {importResult.errors.map((err, i) => (
+                <div key={i} style={{ fontSize: 10, color: 'var(--r)', marginBottom: 2 }}>{err}</div>
+              ))}
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   )
