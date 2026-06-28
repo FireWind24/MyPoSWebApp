@@ -340,7 +340,7 @@ export function InvoiceGrid() {
                     className="cell-input num"
                     value={row.rate || ''}
                     onChange={e => { const v = parseFloat(e.target.value) || 0; updateRow(i, { rate: v }) }}
-                    onFocus={() => setFocusedRow(i)}
+                    onFocus={e => { setFocusedRow(i); e.target.select() }}
                     onKeyDown={e => { if (e.key === 'Tab') { e.preventDefault(); focusInput(i, 'qty') } }}
                   />
                 </td>
@@ -351,7 +351,7 @@ export function InvoiceGrid() {
                     type="number" min="1"
                     value={row.qty || ''}
                     onChange={e => { const v = Math.max(1, parseInt(e.target.value) || 1); updateRow(i, { qty: v }) }}
-                    onFocus={() => setFocusedRow(i)}
+                    onFocus={e => { setFocusedRow(i); e.target.select() }}
                     onKeyDown={e => handleKeyDown(e, i, 'qty')}
                   />
                 </td>
@@ -362,7 +362,7 @@ export function InvoiceGrid() {
                     type="number" min="0" max="100"
                     value={row.disc || ''}
                     onChange={e => { const v = Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)); updateRow(i, { disc: v }) }}
-                    onFocus={() => setFocusedRow(i)}
+                    onFocus={e => { setFocusedRow(i); e.target.select() }}
                     onKeyDown={e => handleKeyDown(e, i, 'disc')}
                   />
                 </td>

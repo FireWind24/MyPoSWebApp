@@ -116,8 +116,8 @@ function App() {
       // F1: Shortcuts
       if (e.key === 'F1') { e.preventDefault(); setShowShortcuts(!showShortcuts); return }
 
-      // F2: New sale
-      if (e.key === 'F2' && !isInput) { e.preventDefault(); clearCart(); showToast('New sale started', 'inf'); return }
+      // F2: New sale (works even in inputs)
+      if (e.key === 'F2') { e.preventDefault(); clearCart(); showToast('New sale started', 'inf'); return }
       // F3: Focus first empty product name cell
       if (e.key === 'F3' && !isInput) {
         e.preventDefault()
@@ -160,8 +160,8 @@ function App() {
         return
       }
 
-      // Shift+Enter: Initiate checkout
-      if (e.key === 'Enter' && e.shiftKey && !e.ctrlKey && !isInput) {
+      // Shift+Enter: Initiate checkout (works even in inputs)
+      if (e.key === 'Enter' && e.shiftKey && !e.ctrlKey) {
         e.preventDefault()
         const items = useCartStore.getState().items
         if (items.length > 0) useUIStore.getState().setShowCheckout(true)
