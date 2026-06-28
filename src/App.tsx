@@ -125,6 +125,41 @@ function App() {
         firstEmpty?.focus()
         return
       }
+      // Ctrl+P: Print receipt
+      if (e.ctrlKey && e.key === 'p' && !isInput) {
+        e.preventDefault()
+        const items = useCartStore.getState().items
+        if (items.length > 0) {
+          import('@services/printer').then(({ printReceipt }) => {
+            const lines: string[] = []
+            const now = new Date().toLocaleString()
+            lines.push('==========================')
+            lines.push('      SALE RECEIPT')
+            lines.push('==========================')
+            lines.push('')
+            lines.push('Date: ' + now)
+            lines.push('----------------------------')
+            lines.push('Item          Qty    Price')
+            lines.push('----------------------------')
+            for (const item of items) {
+              const name = item.name.length > 14 ? item.name.slice(0, 14) : item.name.padEnd(14)
+              lines.push(`${name} ${String(item.qty).padStart(3)} ${item.total.toFixed(2).padStart(8)}`)
+            }
+            lines.push('----------------------------')
+            const total = items.reduce((s, i) => s + i.total, 0)
+            lines.push(`TOTAL:${total.toFixed(2).padStart(25)}`)
+            lines.push('')
+            lines.push('==========================')
+            lines.push('   Thank you!')
+            lines.push('==========================')
+            printReceipt(lines).then(ok => {
+              useUIStore.getState().showToast(ok ? 'Receipt printed' : 'Receipt queued', ok ? 'ok' : 'inf')
+            })
+          })
+        }
+        return
+      }
+
       // Shift+Enter: Initiate checkout
       if (e.key === 'Enter' && e.shiftKey && !e.ctrlKey && !isInput) {
         e.preventDefault()

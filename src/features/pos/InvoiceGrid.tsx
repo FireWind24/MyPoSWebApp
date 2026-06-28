@@ -390,8 +390,14 @@ export function InvoiceGrid() {
         </div>
         <div className="stat"><span className="lbl">Total</span><span className="val" style={{ fontSize: '.85rem' }}>Rs {total.toFixed(2)}</span></div>
         <div className="footer-actions">
-          <button className="btn btn-primary btn-sm" disabled={filledRows.length === 0} onClick={handleCheckout}>Checkout • Rs {total.toFixed(2)}</button>
-          <button className="btn btn-ghost btn-sm" onClick={handleNewSale}>New Sale</button>
+          <button className="btn btn-primary btn-sm" disabled={filledRows.length === 0} onClick={handleCheckout}>
+            Checkout • Rs {total.toFixed(2)}
+            <span style={{ fontSize: 8, opacity: 0.6, marginLeft: 6 }}>⇧+Enter</span>
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={handleNewSale}>
+            New Sale
+            <span style={{ fontSize: 8, opacity: 0.6, marginLeft: 4 }}>F2</span>
+          </button>
         </div>
       </div>
     </div>

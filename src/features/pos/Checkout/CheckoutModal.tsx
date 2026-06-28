@@ -3,6 +3,7 @@ import { useUIStore } from '@stores/uiStore'
 import { useCartStore } from '@stores/cartStore'
 import { db } from '@db/schema'
 import { generateId } from '@shared/utils'
+import { printReceipt } from '@services/printer'
 import { Modal } from '@shared/ui/Modal'
 import { Button } from '@shared/ui/Button'
 
@@ -109,6 +110,29 @@ export function CheckoutModal() {
       setCustomerSearch('')
       setShowCheckout(false)
       showToast('Sale completed!', 'ok')
+      // Auto-print receipt
+      const printLines: string[] = []
+      const nowStr = new Date(now).toLocaleString()
+      printLines.push('==========================')
+      printLines.push('      SALE RECEIPT')
+      printLines.push('==========================')
+      printLines.push('')
+      printLines.push('Date: ' + nowStr)
+      printLines.push('----------------------------')
+      printLines.push('Item          Qty    Price')
+      printLines.push('----------------------------')
+      for (const item of items) {
+        const name = item.name.length > 14 ? item.name.slice(0, 14) : item.name.padEnd(14)
+        printLines.push(`${name} ${String(item.qty).padStart(3)} ${item.total.toFixed(2).padStart(8)}`)
+      }
+      printLines.push('----------------------------')
+      printLines.push(`TOTAL:${total.toFixed(2).padStart(25)}`)
+      if (customerName) printLines.push(`Customer: ${customerName}`)
+      printLines.push('')
+      printLines.push('==========================')
+      printLines.push('   Thank you!')
+      printLines.push('==========================')
+      printReceipt(printLines)
     } catch {
       showToast('Checkout failed', 'err')
     } finally {
