@@ -59,7 +59,7 @@ export function InvoiceGrid() {
   const setShowCheckout = useUIStore(s => s.setShowCheckout)
   const showToast = useUIStore(s => s.showToast)
 
-  // Watch for external cart clear (F2 from App.tsx)
+  // Watch for external cart clear (F2 from App.tsx), then focus first field
   const prevLen = useRef(cartItems.length)
   useEffect(() => {
     if (prevLen.current > 0 && cartItems.length === 0 && filledRows.length > 0) {
@@ -67,6 +67,7 @@ export function InvoiceGrid() {
       setBillDisc(0)
       setCustomerName('')
       setAc(null)
+      setTimeout(focusFirstEmpty, 100)
     }
     prevLen.current = cartItems.length
   }, [cartItems.length]) // eslint-disable-line
@@ -136,35 +137,25 @@ export function InvoiceGrid() {
     const input = inputRefs.current.get(`${col}_${rowIndex}`)
     if (!input) return null
     const rect = input.getBoundingClientRect()
-    const wrapRect = tableWrapRef.current?.getBoundingClientRect()
-    if (!wrapRect) return null
-    return {
-      top: rect.bottom - wrapRect.top + tableWrapRef.current!.scrollTop,
-      left: rect.left - wrapRect.left,
-      width: rect.width,
-    }
+    return { top: rect.bottom, left: rect.left, width: rect.width }
   }, [])
 
   const handleNameChange = useCallback((index: number, value: string) => {
     updateRow(index, { productName: value })
-    if (!value.trim()) { setAc(prev => prev?.rowIndex === index && prev.field === 'name' ? null : prev); return }
+    if (!value.trim()) { setAc(null); return }
     const pos = getCellPosition(index, 'name')
     if (!pos) return
     const filtered = allProducts.filter(p => p.name.toLowerCase().includes(value.toLowerCase()))
-    setAc(prev => prev?.field === 'name' && prev.rowIndex === index && prev.query === value ? prev : {
-      field: 'name', rowIndex: index, query: value, results: filtered.slice(0, 8), selectedIndex: 0, position: pos,
-    })
+    setAc({ field: 'name', rowIndex: index, query: value, results: filtered.slice(0, 8), selectedIndex: 0, position: pos })
   }, [allProducts, updateRow, getCellPosition])
 
   const handleCodeChange = useCallback((index: number, value: string) => {
     updateRow(index, { code: value })
-    if (!value.trim()) { setAc(prev => prev?.rowIndex === index && prev.field === 'code' ? null : prev); return }
+    if (!value.trim()) { setAc(null); return }
     const pos = getCellPosition(index, 'code')
     if (!pos) return
     const filtered = allProducts.filter(p => p.barcode && p.barcode.toLowerCase().includes(value.toLowerCase()))
-    setAc(prev => prev?.field === 'code' && prev.rowIndex === index && prev.query === value ? prev : {
-      field: 'code', rowIndex: index, query: value, results: filtered.slice(0, 8), selectedIndex: 0, position: pos,
-    })
+    setAc({ field: 'code', rowIndex: index, query: value, results: filtered.slice(0, 8), selectedIndex: 0, position: pos })
   }, [allProducts, updateRow, getCellPosition])
 
   const fillRowFromProduct = useCallback((index: number, product: ProductInfo) => {
@@ -393,24 +384,28 @@ export function InvoiceGrid() {
       </div>
 
       <div className="grid-footer">
-        <div className="stat"><span className="lbl">Items</span><span className="val">{filledRows.length}</span></div>
-        <div className="stat"><span className="lbl">Total Qty</span><span className="val">{totalQty}</span></div>
-        <div className="stat"><span className="lbl">Subtotal</span><span className="val">Rs {subtotal.toFixed(2)}</span></div>
-        {billDisc > 0 && <div className="stat"><span className="lbl">Disc</span><span className="val" style={{ color: 'var(--r)' }}>-Rs {billDiscAmt.toFixed(2)}</span></div>}
-        <div className="stat" style={{ borderRight: 'none' }}>
-          <span className="lbl">Disc %</span>
-          <input className="disc-inp" type="number" min="0" max="100" value={billDisc || ''} onChange={e => setBillDisc(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))} />
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div className="stat"><span className="lbl">Items</span><span className="val">{filledRows.length}</span></div>
+          <div className="stat"><span className="lbl">Qty</span><span className="val">{totalQty}</span></div>
         </div>
-        <div className="stat"><span className="lbl">Total</span><span className="val" style={{ fontSize: '.85rem' }}>Rs {total.toFixed(2)}</span></div>
-        <div className="footer-actions">
-          <button className="btn btn-primary btn-sm" disabled={filledRows.length === 0} onClick={handleCheckout}>
-            Checkout • Rs {total.toFixed(2)}
-            <span style={{ fontSize: 8, opacity: 0.6, marginLeft: 6 }}>⇧+Enter</span>
-          </button>
-          <button className="btn btn-ghost btn-sm" onClick={handleNewSale}>
-            New Sale
-            <span style={{ fontSize: 8, opacity: 0.6, marginLeft: 4 }}>F2</span>
-          </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div className="stat"><span className="lbl">Subtotal</span><span className="val">Rs {subtotal.toFixed(2)}</span></div>
+          {billDisc > 0 && <div className="stat"><span className="lbl">Disc</span><span className="val" style={{ color: 'var(--r)' }}>-Rs {billDiscAmt.toFixed(2)}</span></div>}
+          <div className="stat" style={{ borderRight: 'none' }}>
+            <span className="lbl">Disc %</span>
+            <input className="disc-inp" type="number" min="0" max="100" value={billDisc || ''} onChange={e => setBillDisc(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))} />
+          </div>
+          <div className="stat"><span className="lbl">Total</span><span className="val" style={{ fontSize: '.85rem' }}>Rs {total.toFixed(2)}</span></div>
+          <div className="footer-actions" style={{ marginLeft: 0 }}>
+            <button className="btn btn-primary btn-sm" disabled={filledRows.length === 0} onClick={handleCheckout}>
+              Checkout • Rs {total.toFixed(2)}
+              <span style={{ fontSize: 8, opacity: 0.6, marginLeft: 6 }}>⇧+Enter</span>
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={handleNewSale}>
+              New Sale
+              <span style={{ fontSize: 8, opacity: 0.6, marginLeft: 4 }}>F2</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

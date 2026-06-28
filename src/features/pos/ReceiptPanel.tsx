@@ -49,13 +49,38 @@ export function ReceiptPanel() {
     if (items.length === 0) return
     const lines = generateReceiptLines(items, total, notes)
     const ok = await printReceipt(lines)
-    showToast(ok ? 'Receipt printed' : 'Receipt queued (no printer connected)', ok ? 'ok' : 'inf')
+    if (ok) {
+      showToast('Receipt printed', 'ok')
+    } else {
+      // Fallback: browser print dialog
+      const printWin = window.open('', '_blank', 'width=400,height=600')
+      if (printWin) {
+        printWin.document.write('<html><head><title>Receipt</title><style>body{font-family:monospace;font-size:13px;padding:20px;white-space:pre}@media print{@page{margin:0}}</style></head><body>')
+        printWin.document.write(lines.join('\n'))
+        printWin.document.write('</body></html>')
+        printWin.document.close()
+        printWin.print()
+      }
+      showToast('Receipt sent to browser print', 'inf')
+    }
   }
 
   const handlePrintTest = async () => {
     const lines = generateTestReceipt()
     const ok = await printReceipt(lines)
-    showToast(ok ? 'Test receipt printed' : 'Test receipt queued', ok ? 'ok' : 'inf')
+    if (ok) {
+      showToast('Test receipt printed', 'ok')
+    } else {
+      const printWin = window.open('', '_blank', 'width=400,height=600')
+      if (printWin) {
+        printWin.document.write('<html><head><title>Test Receipt</title><style>body{font-family:monospace;font-size:13px;padding:20px;white-space:pre}@media print{@page{margin:0}}</style></head><body>')
+        printWin.document.write(lines.join('\n'))
+        printWin.document.write('</body></html>')
+        printWin.document.close()
+        printWin.print()
+      }
+      showToast('Test receipt sent to browser print', 'inf')
+    }
   }
 
   return (

@@ -251,6 +251,7 @@ body {
   overflow: hidden;
   padding: 8px 12px;
   gap: 6px;
+  min-height: 0;
 }
 
 .grid-toolbar {
@@ -387,7 +388,7 @@ body {
 
 /* Autocomplete dropdown */
 .ac-dropdown {
-  position: absolute;
+  position: fixed;
   background: var(--s1);
   border: 1px solid var(--bd);
   border-radius: 6px;
