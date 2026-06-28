@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { TabId } from '@shared/types'
+import { toast as showToastFn } from '@shared/ui/Toast'
 
 export type ReportsTab = 'dashboard' | 'sales' | 'products' | 'invoices' | 'inventory' | 'shifts' | 'customers'
 
@@ -50,7 +51,7 @@ export const useUIStore = create<UIState>()(
       setCurrentDept: (d: string) => set({ currentDept: d }),
       toggleTheme: () => set(s => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
       setTheme: (t: 'dark' | 'light') => set({ theme: t }),
-      showToast: (msg: string, type: 'ok' | 'err' | 'inf') => set({ toast: { msg, type } }),
+      showToast: (msg: string, type: 'ok' | 'err' | 'inf') => { set({ toast: { msg, type } }); showToastFn(msg, type) },
       hideToast: () => set({ toast: null }),
       showConfirm: (msg: string, onOk: () => void) => set({ confirm: { msg, onOk } }),
       hideConfirm: () => set({ confirm: null }),

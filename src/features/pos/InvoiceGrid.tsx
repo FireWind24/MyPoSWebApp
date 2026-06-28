@@ -54,9 +54,22 @@ export function InvoiceGrid() {
   const tableWrapRef = useRef<HTMLDivElement>(null)
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map())
 
+  const cartItems = useCartStore(s => s.items)
   const clearCartStore = useCartStore(s => s.clearCart)
   const setShowCheckout = useUIStore(s => s.setShowCheckout)
   const showToast = useUIStore(s => s.showToast)
+
+  // Watch for external cart clear (F2 from App.tsx)
+  const prevLen = useRef(cartItems.length)
+  useEffect(() => {
+    if (prevLen.current > 0 && cartItems.length === 0 && filledRows.length > 0) {
+      setRows(createBlankRows(INITIAL_ROWS))
+      setBillDisc(0)
+      setCustomerName('')
+      setAc(null)
+    }
+    prevLen.current = cartItems.length
+  }, [cartItems.length]) // eslint-disable-line
 
   useEffect(() => {
     const load = async () => {
