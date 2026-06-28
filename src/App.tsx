@@ -130,7 +130,7 @@ function App() {
         e.preventDefault()
         const items = useCartStore.getState().items
         if (items.length > 0) {
-          import('@services/printer').then(({ printReceipt }) => {
+          import('@services/printer').then(({ printViaBrowser }) => {
             const lines: string[] = []
             const now = new Date().toLocaleString()
             lines.push('==========================')
@@ -152,9 +152,8 @@ function App() {
             lines.push('==========================')
             lines.push('   Thank you!')
             lines.push('==========================')
-            printReceipt(lines).then(ok => {
-              useUIStore.getState().showToast(ok ? 'Receipt printed' : 'Receipt queued', ok ? 'ok' : 'inf')
-            })
+            printViaBrowser(lines, 'Sale Receipt')
+            useUIStore.getState().showToast('Receipt sent to printer', 'ok')
           })
         }
         return

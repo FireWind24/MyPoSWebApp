@@ -2,7 +2,7 @@ import { useCartStore } from '@stores/cartStore'
 import { useUIStore } from '@stores/uiStore'
 import { useSyncStore } from '@stores/syncStore'
 import { fmt } from '@shared/utils'
-import { printReceipt, generateTestReceipt } from '@services/printer'
+import { printViaBrowser, generateTestReceipt } from '@services/printer'
 
 function generateReceiptLines(items: import('@shared/types').CartItem[], total: number, notes: string): string[] {
   const lines: string[] = []
@@ -45,42 +45,17 @@ export function ReceiptPanel() {
   const subtotal = items.reduce((s, i) => s + i.total, 0)
   const total = subtotal
 
-  const handlePrint = async () => {
+  const handlePrint = () => {
     if (items.length === 0) return
     const lines = generateReceiptLines(items, total, notes)
-    const ok = await printReceipt(lines)
-    if (ok) {
-      showToast('Receipt printed', 'ok')
-    } else {
-      // Fallback: browser print dialog
-      const printWin = window.open('', '_blank', 'width=400,height=600')
-      if (printWin) {
-        printWin.document.write('<html><head><title>Receipt</title><style>body{font-family:monospace;font-size:13px;padding:20px;white-space:pre}@media print{@page{margin:0}}</style></head><body>')
-        printWin.document.write(lines.join('\n'))
-        printWin.document.write('</body></html>')
-        printWin.document.close()
-        printWin.print()
-      }
-      showToast('Receipt sent to browser print', 'inf')
-    }
+    printViaBrowser(lines, 'Sale Receipt')
+    showToast('Receipt sent to printer', 'ok')
   }
 
-  const handlePrintTest = async () => {
+  const handlePrintTest = () => {
     const lines = generateTestReceipt()
-    const ok = await printReceipt(lines)
-    if (ok) {
-      showToast('Test receipt printed', 'ok')
-    } else {
-      const printWin = window.open('', '_blank', 'width=400,height=600')
-      if (printWin) {
-        printWin.document.write('<html><head><title>Test Receipt</title><style>body{font-family:monospace;font-size:13px;padding:20px;white-space:pre}@media print{@page{margin:0}}</style></head><body>')
-        printWin.document.write(lines.join('\n'))
-        printWin.document.write('</body></html>')
-        printWin.document.close()
-        printWin.print()
-      }
-      showToast('Test receipt sent to browser print', 'inf')
-    }
+    printViaBrowser(lines, 'Test Receipt')
+    showToast('Test receipt sent to printer', 'ok')
   }
 
   return (

@@ -153,6 +153,36 @@ export function processPrintQueue() {
   })
 }
 
+function receiptHtml(lines: string[], title: string): string {
+  const body = lines.map(l => escapeHtml(l)).join('\n')
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
+<style>
+  body{font-family:'Courier New',monospace;font-size:13px;padding:20px;margin:0;line-height:1.4;white-space:pre}
+  @media print{@page{margin:0}}
+  @media screen{body{max-width:80mm;margin:auto}}
+</style></head><body>${body}</body></html>`
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+
+export function printViaBrowser(lines: string[], title: string = 'Receipt') {
+  const iframe = document.createElement('iframe')
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:0;width:80mm;height:0;border:none'
+  document.body.appendChild(iframe)
+  const doc = iframe.contentWindow?.document
+  if (!doc) return
+  doc.open()
+  doc.write(receiptHtml(lines, title))
+  doc.close()
+  iframe.contentWindow?.focus()
+  setTimeout(() => {
+    iframe.contentWindow?.print()
+    setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe) }, 2000)
+  }, 100)
+}
+
 export function generateTestReceipt(): string[] {
   const config = getPrinterConfig()
   const lines: string[] = []

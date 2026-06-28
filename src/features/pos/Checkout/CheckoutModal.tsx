@@ -3,7 +3,7 @@ import { useUIStore } from '@stores/uiStore'
 import { useCartStore } from '@stores/cartStore'
 import { db } from '@db/schema'
 import { generateId } from '@shared/utils'
-import { printReceipt } from '@services/printer'
+import { printViaBrowser } from '@services/printer'
 import { Modal } from '@shared/ui/Modal'
 import { Button } from '@shared/ui/Button'
 
@@ -132,7 +132,7 @@ export function CheckoutModal() {
       printLines.push('==========================')
       printLines.push('   Thank you!')
       printLines.push('==========================')
-      printReceipt(printLines)
+      printViaBrowser(printLines, 'Sale Receipt')
     } catch {
       showToast('Checkout failed', 'err')
     } finally {
