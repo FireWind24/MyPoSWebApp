@@ -8,6 +8,7 @@ import { ReportsPage } from '@features/reports/ReportsPage'
 import { SettingsPage } from '@features/settings/SettingsPage'
 import { ToastContainer } from '@shared/ui/Toast'
 import { ConfirmDialog } from '@shared/ui/ConfirmDialog'
+import { db } from '@db/schema'
 import { SyncIndicator } from '@shared/ui/SyncIndicator'
 import { ShiftIndicator } from '@features/shifts/ShiftManagement'
 import { useUIStore } from '@stores/uiStore'
@@ -16,8 +17,6 @@ import { useSyncStore } from '@stores/syncStore'
 import { useShiftStore } from '@stores/shiftStore'
 import { startSyncEngine } from '@services/syncEngine'
 import { loadPrinterConfig } from '@services/printer'
-
-import { db } from '@db/schema'
 import type { TabId } from '@shared/types'
 
 type UserInfo = {
@@ -35,6 +34,7 @@ function App() {
   const [clock, setClock] = useState('')
   const [todayStats, setTodayStats] = useState({ sales: 0, revenue: 0 })
   const [lowStockCount, setLowStockCount] = useState(0)
+  const [storeName, setStoreName] = useState('My Store')
   const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const tab = useUIStore(s => s.tab)
@@ -70,6 +70,8 @@ function App() {
   useEffect(() => {
     const loadStats = async () => {
       try {
+        const stores = await db.stores.toArray()
+        if (stores.length) setStoreName(stores[0].name)
         const today = new Date().toISOString().slice(0, 10)
         const todayInvs = await db.invoices.filter(i => i.dateStr === today).toArray()
         setTodayStats({
@@ -272,7 +274,7 @@ function App() {
   return (
     <div className={`shell ${theme}`}>
       <div className="topbar">
-        <div className="tb-logo"><span className="tb-logo-dot"></span><span id="tb-store-name">My Store</span></div>
+        <div className="tb-logo"><span className="tb-logo-dot"></span><span id="tb-store-name">{storeName}</span></div>
         <nav className="tb-nav">
           {tabs.map(t => (
             <button key={t.id} className={`tb-tab ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>
