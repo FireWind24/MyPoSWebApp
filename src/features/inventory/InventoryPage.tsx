@@ -4,18 +4,21 @@ import { generateId, fmt, toCsv, parseCsv, pickFile, dlBlob } from '@shared/util
 import { useUIStore } from '@stores/uiStore'
 import { Button } from '@shared/ui/Button'
 import { Modal } from '@shared/ui/Modal'
-import type { Product, StockMovement } from '@shared/types'
+import type { Product, StockMovement, Department } from '@shared/types'
 
-const DEPT_COLORS: Record<string, string> = {
-  'General': '#4d9eff',
-  'Produce': '#00d68f',
-  'Dairy': '#ffa941',
-  'Meat': '#f05252',
-  'Bakery': '#a855f7',
-  'Beverages': '#06b6d4',
-  'Snacks': '#f97316',
-  'Frozen': '#3b82f6',
-}
+const DEFAULT_DEPARTMENTS: { name: string; color: string }[] = [
+  { name: 'General', color: '#4d9eff' },
+  { name: 'Produce', color: '#00d68f' },
+  { name: 'Dairy', color: '#ffa941' },
+  { name: 'Meat', color: '#f05252' },
+  { name: 'Bakery', color: '#a855f7' },
+  { name: 'Beverages', color: '#06b6d4' },
+  { name: 'Snacks', color: '#f97316' },
+  { name: 'Frozen', color: '#3b82f6' },
+]
+
+const DEPT_COLORS: Record<string, string> = {}
+for (const d of DEFAULT_DEPARTMENTS) DEPT_COLORS[d.name] = d.color
 
 function getDeptColor(dept: string): string {
   return DEPT_COLORS[dept] || '#8a8a95'
@@ -35,11 +38,34 @@ export function InventoryPage() {
   const [form, setForm] = useState({ name: '', barcode: '', dept: '', price: 0, cost_price: 0, stock: 0, min_stock: 0, unit: '', image_url: '', expiry_date: '' })
   const [showImportResult, setShowImportResult] = useState(false)
   const [importResult, setImportResult] = useState<{ created: number; updated: number; skipped: number; errors: string[] }>({ created: 0, updated: 0, skipped: 0, errors: [] })
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [showDeptModal, setShowDeptModal] = useState(false)
+  const [editingDept, setEditingDept] = useState<Department | null>(null)
+  const [deptForm, setDeptForm] = useState({ name: '', color: '#4d9eff' })
+  const [deptSuggestions, setDeptSuggestions] = useState<Department[]>([])
+  const [showDeptSuggestions, setShowDeptSuggestions] = useState(false)
   const showToast = useUIStore(s => s.showToast)
 
+  // Seed default departments if empty
   useEffect(() => {
-    loadProducts()
+    ;(async () => {
+      const count = await db.departments.count()
+      if (count === 0) {
+        for (let i = 0; i < DEFAULT_DEPARTMENTS.length; i++) {
+          await db.departments.add({ id: generateId(), name: DEFAULT_DEPARTMENTS[i].name, color: DEFAULT_DEPARTMENTS[i].color, sort_order: i })
+        }
+      }
+      loadDepartments()
+    })()
   }, [])
+
+  const loadDepartments = async () => {
+    const all = await db.departments.orderBy('sort_order').toArray()
+    setDepartments(all)
+    for (const d of all) DEPT_COLORS[d.name] = d.color
+  }
+
+  useEffect(() => { loadProducts() }, [])
 
   const loadProducts = async () => {
     try {
@@ -294,6 +320,47 @@ export function InventoryPage() {
     return new Date(dateStr).getTime() < Date.now()
   }
 
+  // Department CRUD
+  const openAddDept = () => { setEditingDept(null); setDeptForm({ name: '', color: '#4d9eff' }); setShowDeptModal(true) }
+  const openEditDept = (d: Department) => { setEditingDept(d); setDeptForm({ name: d.name, color: d.color }); setShowDeptModal(true) }
+
+  const handleSaveDept = async () => {
+    if (!deptForm.name.trim()) { showToast('Department name is required', 'err'); return }
+    try {
+      if (editingDept) {
+        await db.departments.update(editingDept.id, { name: deptForm.name, color: deptForm.color })
+      } else {
+        const maxOrder = departments.length > 0 ? Math.max(...departments.map(d => d.sort_order)) : 0
+        await db.departments.add({ id: generateId(), name: deptForm.name, color: deptForm.color, sort_order: maxOrder + 1 })
+      }
+      setShowDeptModal(false)
+      loadDepartments()
+      showToast(editingDept ? 'Department updated' : 'Department added', 'ok')
+    } catch { showToast('Failed to save department', 'err') }
+  }
+
+  const handleDeleteDept = async (id: string) => {
+    try { await db.departments.delete(id); loadDepartments(); showToast('Department deleted', 'ok') }
+    catch { showToast('Failed to delete', 'err') }
+  }
+
+  // Department autocomplete for product form
+  const handleDeptInputChange = (value: string) => {
+    setForm(f => ({ ...f, dept: value }))
+    if (value.trim()) {
+      const filtered = departments.filter(d => d.name.toLowerCase().includes(value.toLowerCase()))
+      setDeptSuggestions(filtered)
+      setShowDeptSuggestions(filtered.length > 0)
+    } else {
+      setShowDeptSuggestions(false)
+    }
+  }
+
+  const selectDept = (name: string) => {
+    setForm(f => ({ ...f, dept: name }))
+    setShowDeptSuggestions(false)
+  }
+
   return (
     <div className="inv-page">
       <div className="inv-toolbar">
@@ -312,6 +379,7 @@ export function InventoryPage() {
         <Button variant="ghost" size="sm" onClick={handleExportCsv} disabled={products.length === 0}>Export CSV</Button>
         <Button variant="ghost" size="sm" onClick={handleImportCsv}>Import CSV</Button>
         <Button variant="ghost" size="sm" onClick={handleDownloadTemplate}>Template</Button>
+        <Button variant="ghost" size="sm" onClick={openAddDept}>Departments</Button>
       </div>
 
       <div className="inv-table-wrap">
@@ -407,9 +475,19 @@ export function InventoryPage() {
             <label>Barcode</label>
             <input value={form.barcode} onChange={e => setForm(f => ({ ...f, barcode: e.target.value }))} />
           </div>
-          <div className="form-group">
+          <div className="form-group" style={{ position: 'relative' }}>
             <label>Department</label>
-            <input value={form.dept} onChange={e => setForm(f => ({ ...f, dept: e.target.value }))} />
+            <input value={form.dept} onChange={e => handleDeptInputChange(e.target.value)} onFocus={() => { if (form.dept.trim()) { const f = departments.filter(d => d.name.toLowerCase().includes(form.dept.toLowerCase())); setDeptSuggestions(f); setShowDeptSuggestions(f.length > 0) } }} onBlur={() => setTimeout(() => setShowDeptSuggestions(false), 200)} />
+            {showDeptSuggestions && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 6, zIndex: 100, maxHeight: 180, overflowY: 'auto' }}>
+                {deptSuggestions.map(d => (
+                  <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', cursor: 'pointer', fontSize: '.75rem' }} onMouseDown={() => selectDept(d.name)}>
+                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: d.color, flexShrink: 0 }} />
+                    {d.name}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -577,6 +655,47 @@ export function InventoryPage() {
             </div>
           )}
         </div>
+      </Modal>
+
+      {/* Department CRUD Modal */}
+      <Modal open={showDeptModal} onClose={() => setShowDeptModal(false)} title={editingDept ? 'Edit Department' : 'Departments'}>
+        {editingDept !== null || true ? (
+          <div>
+            {!editingDept && (
+              <div style={{ marginBottom: 12, maxHeight: 240, overflowY: 'auto' }}>
+                {departments.map(d => (
+                  <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--bd)' }}>
+                    <span style={{ width: 12, height: 12, borderRadius: '50%', background: d.color, flexShrink: 0 }} />
+                    <span style={{ flex: 1, fontSize: '.8rem' }}>{d.name}</span>
+                    <Button variant="ghost" size="xs" onClick={() => openEditDept(d)}>Edit</Button>
+                    <Button variant="danger" size="xs" onClick={() => handleDeleteDept(d.id)}>Del</Button>
+                  </div>
+                ))}
+                {departments.length === 0 && <div style={{ color: 'var(--t3)', fontSize: '.75rem' }}>No departments yet</div>}
+              </div>
+            )}
+            <div style={{ borderTop: editingDept ? 'none' : '1px solid var(--bd)', paddingTop: editingDept ? 0 : 12 }}>
+              <h4 style={{ fontSize: '.8rem', margin: '0 0 8px' }}>{editingDept ? 'Edit' : 'Add'} Department</h4>
+              <div className="form-group">
+                <label>Name</label>
+                <input value={deptForm.name} onChange={e => setDeptForm(f => ({ ...f, name: e.target.value }))} placeholder="Department name" />
+              </div>
+              <div className="form-group">
+                <label>Color</label>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {['#4d9eff','#00d68f','#ffa941','#f05252','#a855f7','#06b6d4','#f97316','#3b82f6','#8a8a95','#ec4899','#14b8a6','#eab308'].map(c => (
+                    <div key={c} onClick={() => setDeptForm(f => ({ ...f, color: c }))} style={{ width: 24, height: 24, borderRadius: '50%', background: c, cursor: 'pointer', border: deptForm.color === c ? '2px solid var(--t)' : '2px solid transparent', flexShrink: 0 }} />
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', marginTop: 8 }}>
+                <Button variant="ghost" onClick={() => setShowDeptModal(false)}>Close</Button>
+                {editingDept && <Button variant="ghost" onClick={() => { setEditingDept(null); setDeptForm({ name: '', color: '#4d9eff' }) }}>Cancel Edit</Button>}
+                <Button variant="primary" onClick={handleSaveDept}>Save</Button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </Modal>
     </div>
   )

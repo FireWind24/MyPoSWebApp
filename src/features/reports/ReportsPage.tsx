@@ -4,7 +4,7 @@ import { fmt, dlBlob } from '@shared/utils'
 import { useUIStore } from '@stores/uiStore'
 import { useShiftStore } from '@stores/shiftStore'
 import { DashboardPage } from './DashboardPage'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts'
 import type { Invoice, Shift, Product, ShiftReport, Customer } from '@shared/types'
 import type { PieLabelRenderProps } from 'recharts'
 
@@ -216,6 +216,7 @@ function SalesTab() {
               {deptRevenue.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
             </Pie>
             <Tooltip contentStyle={{ background: cc.tooltipBg, border: '1px solid var(--bd)', borderRadius: 6, fontSize: 12, color: cc.tooltipText }} />
+            <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: 11 }} />
           </PieChart>
         </ResponsiveContainer>
       </div>

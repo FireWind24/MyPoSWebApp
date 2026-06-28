@@ -86,11 +86,10 @@ export function InvoiceGrid() {
 
   const filledRows = useMemo(() => rows.filter(r => r.productName.trim() !== ''), [rows])
 
-  const allDepts = useMemo(() => {
-    const map = new Map<string, number>()
-    for (const p of allProducts) { if (p.dept) map.set(p.dept, (map.get(p.dept) || 0) + 1) }
-    return Array.from(map.entries()).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)
-  }, [allProducts])
+  const [deptList, setDeptList] = useState<{ name: string; color: string }[]>([])
+  useEffect(() => {
+    db.departments.orderBy('sort_order').toArray().then(all => setDeptList(all.map(d => ({ name: d.name, color: d.color })))).catch(() => {})
+  }, [])
 
   const computeNetValue = useCallback((rate: number, qty: number, disc: number) => {
     return rate * qty * (1 - disc / 100)
@@ -169,10 +168,10 @@ export function InvoiceGrid() {
     if (!value.trim()) { setAc(null); return }
     const pos = getCellPosition(index, 'dept')
     if (!pos) return
-    const filtered = allDepts.filter(d => d.name.toLowerCase().includes(value.toLowerCase()))
-    const asProducts = filtered.map(d => ({ id: d.name, name: d.name, barcode: '', dept: d.name, price: 0, stock: 0 }))
+    const filtered = deptList.filter(d => d.name.toLowerCase().includes(value.toLowerCase()))
+    const asProducts = filtered.map(d => ({ id: `dept_${d.name}`, name: d.name, barcode: '', dept: d.name, price: 0, stock: 0 }))
     setAc({ field: 'dept', rowIndex: index, query: value, results: asProducts.slice(0, 8), selectedIndex: 0, position: pos })
-  }, [allDepts, updateRow, getCellPosition])
+  }, [deptList, updateRow, getCellPosition])
 
   const fillRowFromProduct = useCallback((index: number, product: ProductInfo) => {
     updateRow(index, {
@@ -241,9 +240,9 @@ export function InvoiceGrid() {
   }, [ac, rows, allProducts, fillRowFromProduct, updateRow, focusInput])
 
   const focusFirstEmpty = useCallback(() => {
-    const idx = rows.findIndex(r => r.productName.trim() === '')
-    if (idx >= 0) { setFocusedRow(idx); focusInput(idx, 'name') }
-  }, [rows, focusInput])
+    setFocusedRow(0)
+    focusInput(0, 'name')
+  }, [focusInput])
 
   const handleNewSale = useCallback(() => {
     setRows(createBlankRows(INITIAL_ROWS))

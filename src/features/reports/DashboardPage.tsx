@@ -3,7 +3,7 @@ import { db } from '@db/schema'
 import { fmt } from '@shared/utils'
 import { useUIStore } from '@stores/uiStore'
 import { useShiftStore } from '@stores/shiftStore'
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
+import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
 import type { PieLabelRenderProps } from 'recharts'
 
 function dateStr(d: Date) {
@@ -158,9 +158,8 @@ export function DashboardPage() {
               <Pie data={paymentMethodData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, percent }: PieLabelRenderProps) => `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`}>
                 {paymentMethodData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
               </Pie>
-              <Tooltip
-                contentStyle={{ background: chartColors.tooltipBg, border: '1px solid var(--bd)', borderRadius: 6, fontSize: 12, color: chartColors.tooltipText }}
-              />
+              <Tooltip contentStyle={{ background: chartColors.tooltipBg, border: '1px solid var(--bd)', borderRadius: 6, fontSize: 12, color: chartColors.tooltipText }} />
+              <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: 11 }} />
             </PieChart>
           </ResponsiveContainer>
         </div>

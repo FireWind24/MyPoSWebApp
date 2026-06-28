@@ -32,9 +32,8 @@ export interface Product {
 export interface Department {
   id: string
   name: string
-  store_id: string
-  sort_order: number
   color: string
+  sort_order: number
 }
 
 export interface CartItem {
