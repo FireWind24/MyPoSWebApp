@@ -50,7 +50,7 @@ export function ReceiptPanel() {
 
       {heldSales.length > 0 && (
         <div className="held-sales-bar">
-          <span style={{ fontSize: 8, fontWeight: 700, color: 'var(--t3)', letterSpacing: 1 }}>HELD ({heldSales.length})</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', letterSpacing: 1 }}>HELD ({heldSales.length})</span>
           {heldSales.map((sale, i) => (
             <button key={i} className="held-sale-btn" onClick={() => {
               const recalled = recallSale(i)

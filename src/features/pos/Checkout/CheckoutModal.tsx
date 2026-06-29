@@ -22,6 +22,7 @@ export function CheckoutModal() {
   const cash = useCartStore(s => s.cash)
   const cardAmount = useCartStore(s => s.cardAmount)
   const customerName = useCartStore(s => s.customerName)
+  const notes = useCartStore(s => s.notes)
   const clearCart = useCartStore(s => s.clearCart)
   const setPaymentMethod = useCartStore(s => s.setPaymentMethod)
   const setCash = useCartStore(s => s.setCash)
@@ -75,7 +76,7 @@ export function CheckoutModal() {
   const handlePrintAndFinish = async () => {
     const stores = await db.stores.toArray()
     const store = stores.length ? stores[0] : undefined
-    const lines = generateSaleReceipt(items, total, { customerName, store: store ? { name: store.name, address: store.address, phone: store.phone, receipt_footer: store.receipt_footer } : undefined })
+    const lines = generateSaleReceipt(items, total, { customerName, notes, store: store ? { name: store.name, address: store.address, phone: store.phone, receipt_footer: store.receipt_footer } : undefined })
     printViaBrowser(lines, 'Sale Receipt')
     finishSale()
   }
@@ -128,6 +129,7 @@ export function CheckoutModal() {
         change: paymentMethod === 'cash' ? cash - total : 0,
         customer_id: '',
         customerName: customerName,
+        notes,
         status: 'completed',
       })
 

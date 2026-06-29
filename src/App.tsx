@@ -136,7 +136,8 @@ function App() {
             const total = items.reduce((s, i) => s + i.total, 0)
             const stores = await import('@db/schema').then(m => m.db.stores.toArray())
             const store = stores.length ? stores[0] : undefined
-            const lines = generateSaleReceipt(items, total, { store: store ? { name: store.name, address: store.address, phone: store.phone, receipt_footer: store.receipt_footer } : undefined })
+            const { notes, customerName } = useCartStore.getState()
+            const lines = generateSaleReceipt(items, total, { notes, customerName, store: store ? { name: store.name, address: store.address, phone: store.phone, receipt_footer: store.receipt_footer } : undefined })
             printViaBrowser(lines, 'Sale Receipt')
             useUIStore.getState().showToast('Receipt sent to printer', 'ok')
           })
@@ -268,9 +269,9 @@ function App() {
                   marginLeft: 4,
                   background: 'var(--r)',
                   color: '#fff',
-                  fontSize: '.5rem',
+                  fontSize: '.62rem',
                   fontWeight: 700,
-                  padding: '1px 5px',
+                  padding: '2px 6px',
                   borderRadius: 8,
                   lineHeight: '1.2',
                 }}>{lowStockCount}</span>
@@ -294,16 +295,16 @@ function App() {
             <div className="tb-date">{new Date().toLocaleDateString('en-PK', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</div>
           </div>
           <button id="theme-toggle" onClick={toggleTheme} title="Toggle theme"
-            style={{ background: 'none', border: 'none', borderLeft: '1px solid var(--bd)', width: 42, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16, color: 'var(--t2)' }}>
+            style={{ background: 'none', border: 'none', borderLeft: '1px solid var(--bd)', width: 48, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 18, color: 'var(--t2)' }}>
             {theme === 'dark' ? '🌙' : '☀️'}
           </button>
-          <div id="tb-user-wrap" style={{ display: 'flex', alignItems: 'center', gap: 8, borderLeft: '1px solid var(--bd)', padding: '0 14px', flexShrink: 0, height: 48 }}>
-            <span id="tb-user-email" style={{ fontSize: 9, color: 'var(--t3)', fontFamily: 'var(--mono)', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name}</span>
+          <div id="tb-user-wrap" style={{ display: 'flex', alignItems: 'center', gap: 9, borderLeft: '1px solid var(--bd)', padding: '0 14px', flexShrink: 0, minHeight: 54 }}>
+            <span id="tb-user-email" style={{ fontSize: 11, color: 'var(--t3)', fontFamily: 'var(--mono)', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name}</span>
             <span className="dept-badge" style={{ background: 'var(--glo)', color: 'var(--g)' }}>{user.role}</span>
             {user.pin && (
-              <button onClick={() => setShowPinLogin(true)} style={{ background: 'none', border: '1px solid var(--bd)', color: 'var(--t2)', borderRadius: 5, padding: '3px 9px', fontSize: 9, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>Lock</button>
+              <button onClick={() => setShowPinLogin(true)} style={{ background: 'none', border: '1px solid var(--bd)', color: 'var(--t2)', borderRadius: 5, padding: '5px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>Lock</button>
             )}
-            <button onClick={handleLogout} style={{ background: 'none', border: '1px solid rgba(240,82,82,.2)', color: 'var(--r)', borderRadius: 5, padding: '3px 9px', fontSize: 9, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>Logout</button>
+            <button onClick={handleLogout} style={{ background: 'none', border: '1px solid rgba(240,82,82,.2)', color: 'var(--r)', borderRadius: 5, padding: '5px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>Logout</button>
           </div>
         </div>
       </div>
@@ -343,7 +344,7 @@ function App() {
                 ))}
               </div>
             </div>
-            <div style={{ marginTop: 12, textAlign: 'center', fontSize: 10, color: 'var(--t3)' }}>Press <kbd>Esc</kbd> or click outside to close</div>
+            <div style={{ marginTop: 12, textAlign: 'center', fontSize: 12, color: 'var(--t3)' }}>Press <kbd>Esc</kbd> or click outside to close</div>
           </div>
         </div>
       )}

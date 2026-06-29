@@ -29,17 +29,18 @@ export function SyncIndicator() {
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 5,
-        padding: '0 10px',
+        gap: 6,
+        padding: '0 12px',
         borderLeft: '1px solid var(--bd)',
-        height: 48,
+        minHeight: 54,
         cursor: 'default',
+        flexShrink: 0,
       }}
     >
       <span
         style={{
-          width: 7,
-          height: 7,
+          width: 9,
+          height: 9,
           borderRadius: '50%',
           background: color,
           boxShadow: `0 0 6px ${color}`,
@@ -47,7 +48,7 @@ export function SyncIndicator() {
           animation: status === 'pending' ? 'pulse-dot 1.5s ease-in-out infinite' : 'none',
         }}
       />
-      <span style={{ fontSize: 8, color: 'var(--t3)', fontWeight: 700, letterSpacing: '.5px' }}>
+      <span style={{ fontSize: 10, color: 'var(--t3)', fontWeight: 700, letterSpacing: '.5px', whiteSpace: 'nowrap' }}>
         {status === 'synced' ? 'SYNCED' : status === 'pending' ? `${queueDepth} PENDING` : status === 'offline' ? 'OFFLINE' : 'ERROR'}
       </span>
     </div>

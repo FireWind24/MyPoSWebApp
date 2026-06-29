@@ -303,7 +303,7 @@ export function InvoiceGrid() {
   return (
     <div className="invoice-grid-area">
       <div className="grid-toolbar">
-        <input placeholder="Customer name..." value={customerName} onChange={e => handleCustomerName(e.target.value)} style={{ maxWidth: 200 }} />
+        <input placeholder="Customer name..." value={customerName} onChange={e => handleCustomerName(e.target.value)} style={{ maxWidth: 240 }} />
         <span style={{ flex: 1 }} />
         <button className="btn btn-ghost btn-sm" onClick={handleNewSale}>New Sale (F2)</button>
       </div>
@@ -457,15 +457,15 @@ export function InvoiceGrid() {
             <span className="lbl">Disc %</span>
             <input className="disc-inp" type="number" min="0" max="100" value={billDisc || ''} onChange={e => { const v = Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)); setBillDisc(v); useCartStore.getState().setDiscPct(v) }} />
           </div>
-          <div className="stat"><span className="lbl">Total</span><span className="val" style={{ fontSize: '.85rem' }}>Rs {total.toFixed(2)}</span></div>
+          <div className="stat"><span className="lbl">Total</span><span className="val" style={{ fontSize: '1rem' }}>Rs {total.toFixed(2)}</span></div>
           <div className="footer-actions" style={{ marginLeft: 0 }}>
             <button className="btn btn-primary btn-sm" disabled={filledRows.length === 0} onClick={handleCheckout}>
               Checkout • Rs {total.toFixed(2)}
-              <span style={{ fontSize: 8, opacity: 0.6, marginLeft: 6 }}>⇧+Enter</span>
+              <span style={{ fontSize: 10, opacity: 0.6, marginLeft: 6 }}>⇧+Enter</span>
             </button>
             <button className="btn btn-ghost btn-sm" onClick={handleNewSale}>
               New Sale
-              <span style={{ fontSize: 8, opacity: 0.6, marginLeft: 4 }}>F2</span>
+              <span style={{ fontSize: 10, opacity: 0.6, marginLeft: 4 }}>F2</span>
             </button>
           </div>
         </div>

@@ -60,7 +60,7 @@ export function CartPanel() {
 
       {heldSales.length > 0 && (
         <div className="held-sales-bar">
-          <span style={{ fontSize: 8, fontWeight: 700, color: 'var(--t3)', letterSpacing: 1 }}>HELD ({heldSales.length})</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', letterSpacing: 1 }}>HELD ({heldSales.length})</span>
           {heldSales.map((sale, i) => (
             <button key={i} className="held-sale-btn" onClick={() => {
               const recalled = recallSale(i)
@@ -88,14 +88,14 @@ export function CartPanel() {
           <div key={i}>
             {editIdx === i ? (
               <div className="cart-item" style={{ flexDirection: 'column', gap: 6, padding: '8px 12px' }}>
-                <div style={{ fontWeight: 700, fontSize: 13 }}>{item.name}</div>
+                <div style={{ fontWeight: 700, fontSize: 15 }}>{item.name}</div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <label style={{ fontSize: 9, color: 'var(--t3)' }}>Qty:</label>
+                  <label style={{ fontSize: 11, color: 'var(--t3)' }}>Qty:</label>
                   <input type="number" min="1" value={editQty} onChange={e => setEditQty(parseInt(e.target.value) || 1)}
-                    style={{ width: 50, background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 4, padding: '4px 6px', color: 'var(--t)', fontFamily: 'var(--mono)', fontSize: 12 }} />
-                  <label style={{ fontSize: 9, color: 'var(--t3)' }}>Price:</label>
+                    style={{ width: 58, background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 4, padding: '5px 7px', color: 'var(--t)', fontFamily: 'var(--mono)', fontSize: 13 }} />
+                  <label style={{ fontSize: 11, color: 'var(--t3)' }}>Price:</label>
                   <input type="number" min="0" step="0.01" value={editPrice} onChange={e => setEditPrice(parseFloat(e.target.value) || 0)}
-                    style={{ width: 70, background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 4, padding: '4px 6px', color: 'var(--t)', fontFamily: 'var(--mono)', fontSize: 12 }} />
+                    style={{ width: 82, background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 4, padding: '5px 7px', color: 'var(--t)', fontFamily: 'var(--mono)', fontSize: 13 }} />
                   <button className="qty-btn" onClick={saveEdit}>✓</button>
                   <button className="qty-btn del" onClick={() => setEditIdx(null)}>✕</button>
                 </div>
@@ -110,7 +110,7 @@ export function CartPanel() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="name">{item.name}</div>
-                  <div style={{ fontSize: 9, color: 'var(--t3)' }}>{item.dept}</div>
+                  <div style={{ fontSize: 11, color: 'var(--t3)' }}>{item.dept}</div>
                 </div>
                 <span className="price">{fmt(item.total)}</span>
               </div>
@@ -140,7 +140,7 @@ export function CartPanel() {
           <span>Notes</span>
           <input type="text" placeholder="Optional cart note…" value={notes}
             onChange={e => setNotes(e.target.value)}
-            style={{ flex: 1, background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 4, padding: '3px 6px', color: 'var(--t)', fontSize: 10, fontFamily: 'var(--mono)' }} />
+            style={{ flex: 1, background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 4, padding: '5px 7px', color: 'var(--t)', fontSize: 12, fontFamily: 'var(--mono)' }} />
         </div>
         <div className="row total">
           <span>Total</span>

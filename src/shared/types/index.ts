@@ -64,6 +64,7 @@ export interface Invoice {
   change: number
   customer_id: string
   customerName: string
+  notes: string
   status: 'completed' | 'refunded' | 'void'
 }
 
