@@ -123,12 +123,14 @@ body {
 
 .tb-nav {
   position: absolute;
-  left: 50%;
+  left: 35%;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 4px;
   white-space: nowrap;
+  max-width: 50%;
+  overflow-x: auto;
 }
 
 .tb-right {
