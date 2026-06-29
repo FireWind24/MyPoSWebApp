@@ -195,7 +195,7 @@ export function InvoiceGrid() {
     if (ac && ac.rowIndex === index) {
       if (e.key === 'ArrowDown') { e.preventDefault(); setAc(prev => prev ? { ...prev, selectedIndex: Math.min(prev.selectedIndex + 1, prev.results.length - 1) } : null); return }
       if (e.key === 'ArrowUp') { e.preventDefault(); setAc(prev => prev ? { ...prev, selectedIndex: Math.max(prev.selectedIndex - 1, 0) } : null); return }
-      if ((e.key === 'Enter' || e.key === 'Tab') && ac.results[ac.selectedIndex]) { e.preventDefault(); fillRowFromProduct(index, ac.results[ac.selectedIndex]); return }
+      if ((e.key === 'Enter' || e.key === 'Tab') && !e.shiftKey && ac.results[ac.selectedIndex]) { e.preventDefault(); fillRowFromProduct(index, ac.results[ac.selectedIndex]); return }
       if (e.key === 'Escape') { e.preventDefault(); setAc(null); return }
     }
 

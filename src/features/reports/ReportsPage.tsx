@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { db } from '@db/schema'
 import { fmt, dlBlob } from '@shared/utils'
+import { printViaBrowser, generateDeptReportReceipt } from '@services/printer'
 import { useUIStore } from '@stores/uiStore'
 import { useShiftStore } from '@stores/shiftStore'
 import { DashboardPage } from './DashboardPage'
@@ -669,7 +670,7 @@ function CustomerSpendTab() {
   )
 }
 
-function generateDeptReportHtml(invoices: Invoice[]): string {
+function parseDeptReport(invoices: Invoice[]) {
   const deptMap = new Map<string, { qty: number; revenue: number }>()
   for (const inv of invoices) {
     for (const item of inv.items) {
@@ -682,11 +683,7 @@ function generateDeptReportHtml(invoices: Invoice[]): string {
   const depts = Array.from(deptMap.entries()).sort((a, b) => b[1].revenue - a[1].revenue)
   const totalQty = depts.reduce((s, d) => s + d[1].qty, 0)
   const totalRev = depts.reduce((s, d) => s + d[1].revenue, 0)
-  const invCount = invoices.length
-  const rows = depts.map(([name, d]) =>
-    `<tr><td>${name}</td><td style="text-align:right">${d.qty}</td><td style="text-align:right">${fmt(d.revenue)}</td><td style="text-align:right">${totalRev > 0 ? (d.revenue / totalRev * 100).toFixed(1) : '0.0'}%</td></tr>`
-  ).join('')
-  return `<table><thead><tr><th>Department</th><th style="text-align:right">Qty</th><th style="text-align:right">Revenue</th><th style="text-align:right">%</th></tr></thead><tbody>${rows}<tr style="font-weight:700;border-top:2px solid currentColor"><td>Total (${invCount} invoices)</td><td style="text-align:right">${totalQty}</td><td style="text-align:right">${fmt(totalRev)}</td><td style="text-align:right">100%</td></tr></tbody></table>`
+  return { depts: depts.map(([name, d]) => ({ name, qty: d.qty, revenue: d.revenue })), totalQty, totalRev }
 }
 
 export function ReportsPage() {
@@ -699,14 +696,32 @@ export function ReportsPage() {
   const handleDailyReport = async () => {
     const today = new Date().toISOString().slice(0, 10)
     const invoices = await db.invoices.filter(i => i.status === 'completed' && i.dateStr === today).toArray()
-    const html = generateDeptReportHtml(invoices)
-    exportHTML(`Daily Report – ${today}`, html)
+    const { depts, totalQty, totalRev } = parseDeptReport(invoices)
+    const stores = await db.stores.toArray()
+    const lines = generateDeptReportReceipt({
+      title: 'Daily Report',
+      date: new Date().toLocaleDateString(),
+      invoiceCount: invoices.length,
+      depts: depts.map(d => ({ ...d, pct: totalRev > 0 ? (d.revenue / totalRev * 100).toFixed(1) : '0.0' })),
+      totalQty, totalRev,
+      storeName: stores.length > 0 ? stores[0].name : undefined,
+    })
+    printViaBrowser(lines, `Daily Report – ${today}`)
   }
 
   const handleZReport = async () => {
     const invoices = await db.invoices.filter(i => i.status === 'completed' && i.dateStr >= zDateFrom && i.dateStr <= zDateTo).toArray()
-    const html = generateDeptReportHtml(invoices)
-    exportHTML(`Z Report – ${zDateFrom} to ${zDateTo}`, html)
+    const { depts, totalQty, totalRev } = parseDeptReport(invoices)
+    const stores = await db.stores.toArray()
+    const lines = generateDeptReportReceipt({
+      title: 'Z Report',
+      date: `${zDateFrom} to ${zDateTo}`,
+      invoiceCount: invoices.length,
+      depts: depts.map(d => ({ ...d, pct: totalRev > 0 ? (d.revenue / totalRev * 100).toFixed(1) : '0.0' })),
+      totalQty, totalRev,
+      storeName: stores.length > 0 ? stores[0].name : undefined,
+    })
+    printViaBrowser(lines, `Z Report – ${zDateFrom} to ${zDateTo}`)
   }
 
   const tabs: { id: TabKey; label: string }[] = [

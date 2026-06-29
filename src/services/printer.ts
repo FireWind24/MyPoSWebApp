@@ -276,6 +276,42 @@ export function generateDailyReportReceipt(report: {
   return lines
 }
 
+export function generateDeptReportReceipt(report: {
+  title: string
+  date: string
+  invoiceCount: number
+  depts: { name: string; qty: number; revenue: number; pct: string }[]
+  totalQty: number
+  totalRev: number
+  storeName?: string
+}): string[] {
+  const lines: string[] = []
+  lines.push('================================')
+  lines.push(`  ${(report.storeName || report.title).toUpperCase()}`)
+  lines.push('================================')
+  lines.push('')
+  lines.push(`Date: ${report.date}`)
+  lines.push(`Invoices: ${report.invoiceCount}`)
+  lines.push('')
+  lines.push('--------------------------------')
+  lines.push('  DEPARTMENT BREAKDOWN')
+  lines.push('--------------------------------')
+  lines.push('Dept             Qty    Amount')
+  lines.push('--------------------------------')
+  for (const d of report.depts) {
+    const name = d.name.length > 16 ? d.name.slice(0, 16) : d.name.padEnd(16)
+    lines.push(`${name} ${String(d.qty).padStart(4)} ${d.revenue.toFixed(2).padStart(10)}`)
+  }
+  lines.push('--------------------------------')
+  lines.push(`TOTAL:${report.totalRev.toFixed(2).padStart(30)}`)
+  lines.push(`Items:${String(report.totalQty).padStart(30)}`)
+  lines.push('')
+  lines.push('================================')
+  lines.push('      End of Report')
+  lines.push('================================')
+  return lines
+}
+
 export function generateTestReceipt(): string[] {
   const config = getPrinterConfig()
   const lines: string[] = []
