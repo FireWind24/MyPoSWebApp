@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { db } from '@db/schema'
 import { fmt } from '@shared/utils'
 import { useUIStore } from '@stores/uiStore'
 import { useShiftStore } from '@stores/shiftStore'
+import { printViaBrowser, generateDailyReportReceipt } from '@services/printer'
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
 import type { PieLabelRenderProps } from 'recharts'
 
@@ -43,7 +44,7 @@ export function DashboardPage() {
       setLastWeekInvs(comp.filter(i => i.dateStr === lastWeekStr))
       setProducts(await db.products.toArray())
     })()
-  }, [])
+  }, [todayStr, yesterdayStr, lastWeekStr])
 
   const todayRevenue = todayInvs.reduce((s, i) => s + i.total, 0)
   const yesterdayRevenue = yesterdayInvs.reduce((s, i) => s + i.total, 0)
@@ -105,6 +106,23 @@ export function DashboardPage() {
     grid: theme === 'dark' ? '#33333f' : '#d4d4db',
   }
 
+  const handlePrintDaily = useCallback(async () => {
+    const stores = await db.stores.toArray()
+    const storeName = stores.length > 0 ? stores[0].name : ''
+    const lines = generateDailyReportReceipt({
+      date: new Date().toLocaleDateString(),
+      revenue: todayRevenue,
+      transactions: todayInvs.length,
+      cashTotal: todayInvs.filter(i => i.payment_method === 'cash').reduce((s, i) => s + i.total, 0),
+      cardTotal: todayInvs.filter(i => i.payment_method === 'card').reduce((s, i) => s + i.total, 0),
+      splitTotal: todayInvs.filter(i => i.payment_method === 'split').reduce((s, i) => s + i.total, 0),
+      avgTransaction: currentDayAvg,
+      topProducts,
+      storeName,
+    })
+    printViaBrowser(lines, 'Daily Report')
+  }, [todayRevenue, todayInvs, currentDayAvg, topProducts])
+
   function KpiCard({ label, value, prev, format }: { label: string; value: number; prev: number; format?: (v: number) => string }) {
     const diff = prev > 0 ? ((value - prev) / prev) * 100 : value > 0 ? 100 : 0
     const isUp = diff >= 0
@@ -133,6 +151,12 @@ export function DashboardPage() {
             30d rolling: {fmt(rollingAvg)}
           </div>
         </div>
+      </div>
+
+      <div style={{ textAlign: 'right', marginBottom: 8 }}>
+        <button className="tb-tab" onClick={handlePrintDaily} style={{ fontSize: '.65rem', padding: '4px 12px' }}>
+          🖨 Print Daily Report
+        </button>
       </div>
 
       <div className="dash-two-col">

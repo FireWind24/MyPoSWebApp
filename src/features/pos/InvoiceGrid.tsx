@@ -50,6 +50,7 @@ export function InvoiceGrid() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; rowIndex: number } | null>(null)
   const [billDisc, setBillDisc] = useState(0)
   const [customerName, setCustomerName] = useState('')
+  const handleCustomerName = useCallback((v: string) => { setCustomerName(v); useCartStore.getState().setCustomerName(v) }, [])
   const [allProducts, setAllProducts] = useState<ProductInfo[]>([])
   const tableWrapRef = useRef<HTMLDivElement>(null)
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map())
@@ -60,15 +61,19 @@ export function InvoiceGrid() {
   const showToast = useUIStore(s => s.showToast)
 
   // Watch for external cart clear (F2 from App.tsx), then focus first field
+  const mounted = useRef(false)
   const prevLen = useRef(cartItems.length)
   useEffect(() => {
-    if (prevLen.current > 0 && cartItems.length === 0 && filledRows.length > 0) {
+    if (mounted.current && cartItems.length === 0) {
       setRows(createBlankRows(INITIAL_ROWS))
       setBillDisc(0)
       setCustomerName('')
       setAc(null)
+      useCartStore.getState().setDiscPct(0)
+      useCartStore.getState().setCustomerName('')
       setTimeout(focusFirstEmpty, 100)
     }
+    mounted.current = true
     prevLen.current = cartItems.length
   }, [cartItems.length]) // eslint-disable-line
 
@@ -219,6 +224,10 @@ export function InvoiceGrid() {
       return
     }
 
+    if (e.key === 'Enter' && e.shiftKey) {
+      return
+    }
+
     if (e.key === 'Enter') {
       e.preventDefault()
       if (col === 'name' && !ac) {
@@ -249,6 +258,8 @@ export function InvoiceGrid() {
     setBillDisc(0)
     setCustomerName('')
     setAc(null)
+    useCartStore.getState().setDiscPct(0)
+    useCartStore.getState().setCustomerName('')
     clearCartStore()
     showToast('New sale started', 'inf')
     setTimeout(focusFirstEmpty, 50)
@@ -292,7 +303,7 @@ export function InvoiceGrid() {
   return (
     <div className="invoice-grid-area">
       <div className="grid-toolbar">
-        <input placeholder="Customer name..." value={customerName} onChange={e => setCustomerName(e.target.value)} style={{ maxWidth: 200 }} />
+        <input placeholder="Customer name..." value={customerName} onChange={e => handleCustomerName(e.target.value)} style={{ maxWidth: 200 }} />
         <span style={{ flex: 1 }} />
         <button className="btn btn-ghost btn-sm" onClick={handleNewSale}>New Sale (F2)</button>
       </div>
@@ -444,7 +455,7 @@ export function InvoiceGrid() {
           {billDisc > 0 && <div className="stat"><span className="lbl">Disc</span><span className="val" style={{ color: 'var(--r)' }}>-Rs {billDiscAmt.toFixed(2)}</span></div>}
           <div className="stat" style={{ borderRight: 'none' }}>
             <span className="lbl">Disc %</span>
-            <input className="disc-inp" type="number" min="0" max="100" value={billDisc || ''} onChange={e => setBillDisc(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))} />
+            <input className="disc-inp" type="number" min="0" max="100" value={billDisc || ''} onChange={e => { const v = Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)); setBillDisc(v); useCartStore.getState().setDiscPct(v) }} />
           </div>
           <div className="stat"><span className="lbl">Total</span><span className="val" style={{ fontSize: '.85rem' }}>Rs {total.toFixed(2)}</span></div>
           <div className="footer-actions" style={{ marginLeft: 0 }}>

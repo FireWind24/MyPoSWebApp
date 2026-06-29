@@ -11,9 +11,9 @@ export function toMs(v: number | string | Date): number {
   return new Date(v).getTime()
 }
 
-export function fmt(v: number | string): string {
+export function fmt(v: number | string, currency?: string): string {
   const num = parseFloat(String(v)) || 0
-  return 'Rs ' + num.toLocaleString('en-IN', {
+  return (currency || 'Rs') + ' ' + num.toLocaleString('en-IN', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })
@@ -71,7 +71,7 @@ export function parseCsv(text: string): { headers: string[]; rows: string[][] } 
   let inQuotes = false
   for (let i = 0; i < text.length; i++) {
     const ch = text[i]
-    if (ch === '"') { inQuotes = !inQuotes; current += ch }
+    if (ch === '"') { inQuotes = !inQuotes }
     else if (ch === '\n' && !inQuotes) { lines.push(current); current = '' }
     else if (ch === '\r' && !inQuotes) { /* skip CR */ }
     else current += ch

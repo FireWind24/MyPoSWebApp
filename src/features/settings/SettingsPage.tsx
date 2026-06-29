@@ -149,7 +149,7 @@ export function SettingsPage() {
         return (
           <>
             {subTab === 'store' && (
-                <div className="section">
+                <div className="section" onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveStore() } }}>
                   <h3>Store Settings</h3>
                   <div className="form-group">
                     <label>Store Name</label>

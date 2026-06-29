@@ -228,6 +228,54 @@ export function generateSaleReceipt(
   return lines
 }
 
+export function generateDailyReportReceipt(report: {
+  date: string
+  revenue: number
+  transactions: number
+  cashTotal: number
+  cardTotal: number
+  splitTotal: number
+  avgTransaction: number
+  topProducts: { name: string; qty: number; revenue: number }[]
+  storeName?: string
+}): string[] {
+  const lines: string[] = []
+  const s = (n: number) => n.toFixed(2)
+  lines.push('================================')
+  lines.push(`  ${(report.storeName || 'DAILY REPORT').toUpperCase()}`)
+  lines.push('================================')
+  lines.push('')
+  lines.push(`Date: ${report.date}`)
+  lines.push('--------------------------------')
+  lines.push('  SALES SUMMARY')
+  lines.push('--------------------------------')
+  lines.push(`Revenue:            ${s(report.revenue).padStart(10)}`)
+  lines.push(`Transactions:       ${String(report.transactions).padStart(10)}`)
+  lines.push(`Avg Transaction:    ${s(report.avgTransaction).padStart(10)}`)
+  lines.push('')
+  lines.push('--------------------------------')
+  lines.push('  PAYMENT BREAKDOWN')
+  lines.push('--------------------------------')
+  lines.push(`Cash:               ${s(report.cashTotal).padStart(10)}`)
+  lines.push(`Card:               ${s(report.cardTotal).padStart(10)}`)
+  lines.push(`Split:              ${s(report.splitTotal).padStart(10)}`)
+  lines.push('')
+  lines.push('--------------------------------')
+  lines.push('  TOP PRODUCTS')
+  lines.push('--------------------------------')
+  lines.push('Product          Qty   Amount')
+  lines.push('--------------------------------')
+  for (const p of report.topProducts) {
+    const name = p.name.length > 16 ? p.name.slice(0, 16) : p.name.padEnd(16)
+    lines.push(`${name} ${String(p.qty).padStart(3)} ${s(p.revenue).padStart(8)}`)
+  }
+  lines.push('')
+  lines.push('================================')
+  lines.push('      End of Day Report')
+  lines.push('================================')
+  return lines
+}
+
 export function generateTestReceipt(): string[] {
   const config = getPrinterConfig()
   const lines: string[] = []

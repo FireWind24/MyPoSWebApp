@@ -522,7 +522,7 @@ function ShiftSummaryTab() {
         setReport(r)
       } catch { setReport(null) }
     })()
-  }, [selectedShiftId])
+  }, [selectedShiftId, getShiftReport])
 
   const chartData = report?.hourly_breakdown || []
 
@@ -669,9 +669,45 @@ function CustomerSpendTab() {
   )
 }
 
+function generateDeptReportHtml(invoices: Invoice[]): string {
+  const deptMap = new Map<string, { qty: number; revenue: number }>()
+  for (const inv of invoices) {
+    for (const item of inv.items) {
+      const d = deptMap.get(item.dept || 'Other') || { qty: 0, revenue: 0 }
+      d.qty += item.qty
+      d.revenue += item.total
+      deptMap.set(item.dept || 'Other', d)
+    }
+  }
+  const depts = Array.from(deptMap.entries()).sort((a, b) => b[1].revenue - a[1].revenue)
+  const totalQty = depts.reduce((s, d) => s + d[1].qty, 0)
+  const totalRev = depts.reduce((s, d) => s + d[1].revenue, 0)
+  const invCount = invoices.length
+  const rows = depts.map(([name, d]) =>
+    `<tr><td>${name}</td><td style="text-align:right">${d.qty}</td><td style="text-align:right">${fmt(d.revenue)}</td><td style="text-align:right">${totalRev > 0 ? (d.revenue / totalRev * 100).toFixed(1) : '0.0'}%</td></tr>`
+  ).join('')
+  return `<table><thead><tr><th>Department</th><th style="text-align:right">Qty</th><th style="text-align:right">Revenue</th><th style="text-align:right">%</th></tr></thead><tbody>${rows}<tr style="font-weight:700;border-top:2px solid currentColor"><td>Total (${invCount} invoices)</td><td style="text-align:right">${totalQty}</td><td style="text-align:right">${fmt(totalRev)}</td><td style="text-align:right">100%</td></tr></tbody></table>`
+}
+
 export function ReportsPage() {
   const reportsTab = useUIStore(s => s.reportsTab)
   const setReportsTab = useUIStore(s => s.setReportsTab)
+  const [zDateFrom, setZDateFrom] = useState(() => new Date().toISOString().slice(0, 10))
+  const [zDateTo, setZDateTo] = useState(() => new Date().toISOString().slice(0, 10))
+  const [showZPicker, setShowZPicker] = useState(false)
+
+  const handleDailyReport = async () => {
+    const today = new Date().toISOString().slice(0, 10)
+    const invoices = await db.invoices.filter(i => i.status === 'completed' && i.dateStr === today).toArray()
+    const html = generateDeptReportHtml(invoices)
+    exportHTML(`Daily Report – ${today}`, html)
+  }
+
+  const handleZReport = async () => {
+    const invoices = await db.invoices.filter(i => i.status === 'completed' && i.dateStr >= zDateFrom && i.dateStr <= zDateTo).toArray()
+    const html = generateDeptReportHtml(invoices)
+    exportHTML(`Z Report – ${zDateFrom} to ${zDateTo}`, html)
+  }
 
   const tabs: { id: TabKey; label: string }[] = [
     { id: 'dashboard', label: 'Dashboard' },
@@ -685,7 +721,7 @@ export function ReportsPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', gap: 4, padding: '8px 12px', borderBottom: '1px solid var(--bd)', flexWrap: 'wrap', flexShrink: 0, background: 'var(--s1)' }}>
+      <div style={{ display: 'flex', gap: 4, padding: '8px 12px', borderBottom: '1px solid var(--bd)', flexWrap: 'wrap', flexShrink: 0, background: 'var(--s1)', alignItems: 'center' }}>
         {tabs.map(t => (
           <button key={t.id}
             className={`btn btn-sm ${reportsTab === t.id ? 'btn-g' : 'btn-ghost'}`}
@@ -698,6 +734,20 @@ export function ReportsPage() {
             {t.label}
           </button>
         ))}
+        <div className="spacer" />
+        <button className="btn btn-sm btn-ghost" onClick={handleDailyReport}>📋 Daily Report</button>
+        <div style={{ position: 'relative' }}>
+          <button className="btn btn-sm btn-ghost" onClick={() => setShowZPicker(!showZPicker)}>📊 Z Report</button>
+          {showZPicker && (
+            <div style={{ position: 'absolute', top: '100%', right: 0, background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 6, padding: 8, display: 'flex', gap: 6, alignItems: 'center', zIndex: 50, marginTop: 4, boxShadow: '0 4px 12px rgba(0,0,0,.15)' }}>
+              <label style={{ fontSize: '.65rem', color: 'var(--t2)' }}>From</label>
+              <input type="date" value={zDateFrom} onChange={e => setZDateFrom(e.target.value)} style={{ fontSize: '.7rem', padding: '3px 6px', border: '1px solid var(--bd)', borderRadius: 4, background: 'var(--s2)', color: 'var(--t)' }} />
+              <label style={{ fontSize: '.65rem', color: 'var(--t2)' }}>To</label>
+              <input type="date" value={zDateTo} onChange={e => setZDateTo(e.target.value)} style={{ fontSize: '.7rem', padding: '3px 6px', border: '1px solid var(--bd)', borderRadius: 4, background: 'var(--s2)', color: 'var(--t)' }} />
+              <button className="btn btn-sm btn-g" onClick={() => { handleZReport(); setShowZPicker(false) }}>Run</button>
+            </div>
+          )}
+        </div>
       </div>
       <div style={{ flex: 1, overflow: 'auto' }}>
         {reportsTab === 'dashboard' && <DashboardPage />}

@@ -113,6 +113,30 @@ body {
   z-index: 100;
 }
 
+.tb-logo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-width: 140px;
+}
+
+.tb-nav {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+}
+
+.tb-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
 .topbar .store-name {
   font-weight: 800;
   font-size: 1rem;
@@ -331,6 +355,7 @@ body {
 .grid-table tr.focused td {
   outline: 1px solid var(--bd2);
   outline-offset: -1px;
+  background: rgba(0,214,143,.04) !important;
 }
 
 .grid-table tr.focused td:first-child {
@@ -385,7 +410,9 @@ body {
   font-size: 11px;
   color: var(--t3);
   cursor: pointer;
+  transition: background .1s, color .1s;
 }
+.grid-table td.sr-cell:hover { background: var(--r2); color: var(--r); }
 
 /* Autocomplete dropdown */
 .ac-dropdown {
@@ -398,7 +425,9 @@ body {
   max-height: 240px;
   overflow-y: auto;
   min-width: 200px;
+  animation: ac-fade-in .12s ease-out;
 }
+@keyframes ac-fade-in { from { opacity: 0; transform: translateY(-4px) } to { opacity: 1; transform: translateY(0) } }
 
 .ac-dropdown .ac-item {
   display: flex;
@@ -689,6 +718,8 @@ body {
 }
 
 .btn-ghost:hover { background: var(--s2); border-color: var(--bd2); }
+.btn:focus-visible { outline: 2px solid var(--g); outline-offset: 2px; }
+.btn-sm:focus-visible { outline: 2px solid var(--g); outline-offset: 1px; }
 
 .btn-danger {
   background: var(--r);
@@ -1718,9 +1749,10 @@ tr:hover td { background: var(--s2); }
 .tb-tab-icon { font-size: .7rem; }
 .tb-fkey { margin-left: 2px; font-size: .5rem; opacity: .5; }
 .tb-right { display: flex; align-items: center; margin-left: auto; gap: 0; }
-.tb-metric { display: flex; flex-direction: column; align-items: center; padding: 0 10px; border-left: 1px solid var(--bd); height: 48; }
+.tb-metric { display: flex; flex-direction: column; align-items: center; padding: 0 10px; border-left: 1px solid var(--bd); height: 48px; transition: background .15s; cursor: pointer; }
+.tb-metric:hover { background: var(--s2); }
 .tb-metric-v { font-family: var(--mono); font-size: .65rem; font-weight: 700; color: var(--t); }
 .tb-metric-l { font-size: .5rem; color: var(--t3); font-weight: 600; text-transform: uppercase; letter-spacing: .3px; }
-.tb-clock-wrap { display: flex; flex-direction: column; align-items: center; padding: 0 10px; border-left: 1px solid var(--bd); height: 48; }
+.tb-clock-wrap { display: flex; flex-direction: column; align-items: center; padding: 0 10px; border-left: 1px solid var(--bd); height: 48px; }
 .tb-time { font-family: var(--mono); font-size: .7rem; font-weight: 700; color: var(--t); }
 .tb-date { font-size: .5rem; color: var(--t3); font-weight: 600; white-space: nowrap; }

@@ -61,7 +61,7 @@ async function processQueue() {
           .eq(pk, change.payload.id)
         if (error) throw error
       }
-    } catch (err) {
+    } catch {
       change.retries++
       if (change.retries < MAX_RETRIES) {
         failed.push(change)

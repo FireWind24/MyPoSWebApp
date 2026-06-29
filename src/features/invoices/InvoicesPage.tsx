@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { db } from '@db/schema'
 import { fmt, formatDateTime } from '@shared/utils'
 import type { Invoice } from '@shared/types'
@@ -6,12 +6,17 @@ import type { Invoice } from '@shared/types'
 export function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [selected, setSelected] = useState<Invoice | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [searchText, setSearchText] = useState('')
+  const [dateFrom, setDateFrom] = useState(() => new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10))
+  const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10))
 
   useEffect(() => {
     loadInvoices()
   }, [])
 
   const loadInvoices = async () => {
+    setLoading(true)
     try {
       const all = await db.invoices
         .orderBy('date')
@@ -19,17 +24,39 @@ export function InvoicesPage() {
         .toArray()
       setInvoices(all)
     } catch { }
+    setLoading(false)
   }
+
+  const filtered = useMemo(() => {
+    return invoices.filter(inv => {
+      if (inv.dateStr < dateFrom || inv.dateStr > dateTo) return false
+      if (searchText) {
+        const q = searchText.toLowerCase()
+        if (!inv.id.toLowerCase().includes(q) &&
+            !(inv.customerName || '').toLowerCase().includes(q) &&
+            !inv.payment_method.toLowerCase().includes(q)) return false
+      }
+      return true
+    })
+  }, [invoices, dateFrom, dateTo, searchText])
 
   return (
     <div className="inv-page-layout">
       <div className="inv-list-panel">
         <div className="inv-list-header">
-          <span>Invoices ({invoices.length})</span>
+          <span>Invoices ({filtered.length})</span>
           <span style={{ fontSize: '.6rem', fontWeight: 400 }}>Today: {invoices.filter(i => i.dateStr === new Date().toISOString().slice(0, 10)).length}</span>
         </div>
+        <div style={{ display: 'flex', gap: 4, padding: '4px 8px', borderBottom: '1px solid var(--bd)', alignItems: 'center', flexWrap: 'wrap' }}>
+          <input placeholder="Search ID, customer..." value={searchText} onChange={e => setSearchText(e.target.value)} style={{ flex: 1, minWidth: 100, fontSize: '.65rem', padding: '4px 6px', border: '1px solid var(--bd)', borderRadius: 4, background: 'var(--s2)', color: 'var(--t)' }} />
+          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ fontSize: '.6rem', padding: '3px 6px', border: '1px solid var(--bd)', borderRadius: 4, background: 'var(--s2)', color: 'var(--t)' }} />
+          <span style={{ color: 'var(--t3)', fontSize: '.6rem' }}>→</span>
+          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ fontSize: '.6rem', padding: '3px 6px', border: '1px solid var(--bd)', borderRadius: 4, background: 'var(--s2)', color: 'var(--t)' }} />
+        </div>
         <div className="inv-list-items">
-          {invoices.map(inv => (
+          {loading ? (
+            <div style={{ textAlign: 'center', color: 'var(--t3)', padding: 30, fontSize: '.7rem' }}>Loading...</div>
+          ) : filtered.map(inv => (
             <div
               key={inv.id}
               className={`inv-list-item ${selected?.id === inv.id ? 'active' : ''}`}
@@ -49,9 +76,9 @@ export function InvoicesPage() {
               </div>
             </div>
           ))}
-          {invoices.length === 0 && (
+          {!loading && filtered.length === 0 && (
             <div style={{ textAlign: 'center', color: 'var(--t3)', padding: 30, fontSize: '.7rem' }}>
-              No invoices yet
+              {invoices.length === 0 ? 'No invoices yet' : 'No invoices match filters'}
             </div>
           )}
         </div>

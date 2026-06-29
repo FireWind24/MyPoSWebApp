@@ -33,20 +33,7 @@ export function PinLogin({ user, onSuccess, onLogout }: PinLoginProps) {
     }
   }, [lockedUntil])
 
-  const handleKeyPress = useCallback((key: string) => {
-    if (lockedUntil > Date.now()) return
-    setError('')
-
-    if (key === 'backspace') {
-      setPin(p => p.slice(0, -1))
-    } else if (key === 'enter') {
-      validatePin()
-    } else if (pin.length < 6) {
-      setPin(p => p + key)
-    }
-  }, [pin, lockedUntil])
-
-  const validatePin = async () => {
+  const validatePin = useCallback(async () => {
     if (pin.length < 4) {
       setError('PIN must be 4-6 digits')
       return
@@ -70,7 +57,20 @@ export function PinLogin({ user, onSuccess, onLogout }: PinLoginProps) {
     } catch {
       setError('Error validating PIN')
     }
-  }
+  }, [pin, attempts, user.id, onSuccess])
+
+  const handleKeyPress = useCallback((key: string) => {
+    if (lockedUntil > Date.now()) return
+    setError('')
+
+    if (key === 'backspace') {
+      setPin(p => p.slice(0, -1))
+    } else if (key === 'enter') {
+      validatePin()
+    } else if (pin.length < 6) {
+      setPin(p => p + key)
+    }
+  }, [pin, lockedUntil, validatePin])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

@@ -44,6 +44,7 @@ export function InventoryPage() {
   const [deptForm, setDeptForm] = useState({ name: '', color: '#4d9eff' })
   const [deptSuggestions, setDeptSuggestions] = useState<Department[]>([])
   const [showDeptSuggestions, setShowDeptSuggestions] = useState(false)
+  const [deptSelectedIndex, setDeptSelectedIndex] = useState(0)
   const showToast = useUIStore(s => s.showToast)
 
   // Seed default departments if empty
@@ -253,7 +254,7 @@ export function InventoryPage() {
 
   const handleDuplicate = async (p: Product) => {
     try {
-      const { id, ...rest } = p
+      const { id: _id, ...rest } = p
       await db.products.add({
         ...rest,
         id: generateId(),
@@ -466,6 +467,14 @@ export function InventoryPage() {
       </div>
 
       <Modal open={showForm} onClose={() => setShowForm(false)} title={editingId ? 'Edit Product' : 'Add Product'} wide>
+        <div onKeyDown={e => {
+          if (showDeptSuggestions) {
+            if (e.key === 'ArrowDown') { e.preventDefault(); setDeptSelectedIndex(i => Math.min(i + 1, deptSuggestions.length - 1)); return }
+            if (e.key === 'ArrowUp') { e.preventDefault(); setDeptSelectedIndex(i => Math.max(i - 1, 0)); return }
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); selectDept(deptSuggestions[deptSelectedIndex]?.name); return }
+          }
+          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSave() }
+        }}>
         <div className="form-group">
           <label>Product Name *</label>
           <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
@@ -477,11 +486,11 @@ export function InventoryPage() {
           </div>
           <div className="form-group" style={{ position: 'relative' }}>
             <label>Department</label>
-            <input value={form.dept} onChange={e => handleDeptInputChange(e.target.value)} onFocus={() => { if (form.dept.trim()) { const f = departments.filter(d => d.name.toLowerCase().includes(form.dept.toLowerCase())); setDeptSuggestions(f); setShowDeptSuggestions(f.length > 0) } }} onBlur={() => setTimeout(() => setShowDeptSuggestions(false), 200)} />
+            <input value={form.dept} onChange={e => { handleDeptInputChange(e.target.value); setDeptSelectedIndex(0) }} onFocus={() => { if (form.dept.trim()) { const f = departments.filter(d => d.name.toLowerCase().includes(form.dept.toLowerCase())); setDeptSuggestions(f); setShowDeptSuggestions(f.length > 0); setDeptSelectedIndex(0) } }} onBlur={() => setTimeout(() => setShowDeptSuggestions(false), 200)} />
             {showDeptSuggestions && (
               <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 6, zIndex: 100, maxHeight: 180, overflowY: 'auto' }}>
-                {deptSuggestions.map(d => (
-                  <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', cursor: 'pointer', fontSize: '.75rem' }} onMouseDown={() => selectDept(d.name)}>
+                {deptSuggestions.map((d, i) => (
+                  <div key={d.id} onMouseDown={() => selectDept(d.name)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', cursor: 'pointer', fontSize: '.75rem', background: i === deptSelectedIndex ? 'rgba(0,214,143,.15)' : 'transparent' }}>
                     <span style={{ width: 10, height: 10, borderRadius: '50%', background: d.color, flexShrink: 0 }} />
                     {d.name}
                   </div>
@@ -528,9 +537,11 @@ export function InventoryPage() {
           <Button variant="ghost" onClick={() => setShowForm(false)}>Cancel</Button>
           <Button variant="primary" onClick={handleSave}>Save</Button>
         </div>
+        </div>
       </Modal>
 
       <Modal open={!!showStockAdj} onClose={() => setShowStockAdj(null)} title="Stock Adjustment" narrow>
+        <div onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleStockAdj() } }}>
         <div className="form-group">
           <label>Delta (+/-)</label>
           <input type="number" value={adjForm.delta || ''} onChange={e => setAdjForm(f => ({ ...f, delta: parseInt(e.target.value) || 0 }))} placeholder="e.g. 10 or -5" />
@@ -552,6 +563,7 @@ export function InventoryPage() {
         <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', marginTop: 8 }}>
           <Button variant="ghost" onClick={() => setShowStockAdj(null)}>Cancel</Button>
           <Button variant="primary" onClick={handleStockAdj}>Apply</Button>
+        </div>
         </div>
       </Modal>
 
@@ -659,8 +671,8 @@ export function InventoryPage() {
 
       {/* Department CRUD Modal */}
       <Modal open={showDeptModal} onClose={() => setShowDeptModal(false)} title={editingDept ? 'Edit Department' : 'Departments'}>
-        {editingDept !== null || true ? (
-          <div>
+        {editingDept !== null ? (
+          <div onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveDept() } }}>
             {!editingDept && (
               <div style={{ marginBottom: 12, maxHeight: 240, overflowY: 'auto' }}>
                 {departments.map(d => (
