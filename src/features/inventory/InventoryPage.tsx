@@ -671,21 +671,20 @@ export function InventoryPage() {
 
       {/* Department CRUD Modal */}
       <Modal open={showDeptModal} onClose={() => setShowDeptModal(false)} title={editingDept ? 'Edit Department' : 'Departments'}>
-        {editingDept !== null ? (
-          <div onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveDept() } }}>
-            {!editingDept && (
-              <div style={{ marginBottom: 12, maxHeight: 240, overflowY: 'auto' }}>
-                {departments.map(d => (
-                  <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--bd)' }}>
-                    <span style={{ width: 12, height: 12, borderRadius: '50%', background: d.color, flexShrink: 0 }} />
-                    <span style={{ flex: 1, fontSize: '.8rem' }}>{d.name}</span>
-                    <Button variant="ghost" size="xs" onClick={() => openEditDept(d)}>Edit</Button>
-                    <Button variant="danger" size="xs" onClick={() => handleDeleteDept(d.id)}>Del</Button>
-                  </div>
-                ))}
-                {departments.length === 0 && <div style={{ color: 'var(--t3)', fontSize: '.75rem' }}>No departments yet</div>}
-              </div>
-            )}
+        <div onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveDept() } }}>
+          {!editingDept && (
+            <div style={{ marginBottom: 12, maxHeight: 240, overflowY: 'auto' }}>
+              {departments.map(d => (
+                <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--bd)' }}>
+                  <span style={{ width: 12, height: 12, borderRadius: '50%', background: d.color, flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontSize: '.8rem' }}>{d.name}</span>
+                  <Button variant="ghost" size="xs" onClick={() => openEditDept(d)}>Edit</Button>
+                  <Button variant="danger" size="xs" onClick={() => handleDeleteDept(d.id)}>Del</Button>
+                </div>
+              ))}
+              {departments.length === 0 && <div style={{ color: 'var(--t3)', fontSize: '.75rem' }}>No departments yet</div>}
+            </div>
+          )}
             <div style={{ borderTop: editingDept ? 'none' : '1px solid var(--bd)', paddingTop: editingDept ? 0 : 12 }}>
               <h4 style={{ fontSize: '.8rem', margin: '0 0 8px' }}>{editingDept ? 'Edit' : 'Add'} Department</h4>
               <div className="form-group">
@@ -707,7 +706,7 @@ export function InventoryPage() {
               </div>
             </div>
           </div>
-        ) : null}
+        )}
       </Modal>
     </div>
   )
