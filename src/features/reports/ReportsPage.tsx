@@ -424,12 +424,14 @@ function InvoiceDetailTab() {
 
 function InventoryValuationTab() {
   const [products, setProducts] = useState<Product[]>([])
+  const [sortKey, setSortKey] = useState<string>('stockValueCost')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
   useEffect(() => {
     ;(async () => setProducts(await db.products.toArray()))()
   }, [])
 
-  const data = useMemo(() => {
+  const base = useMemo(() => {
     return products.map(p => {
       const stockQty = p.stock || 0
       const costPrice = p.cost_price || 0
@@ -438,8 +440,41 @@ function InventoryValuationTab() {
       const stockValueRetail = stockQty * retailPrice
       const margin = retailPrice > 0 ? ((retailPrice - costPrice) / retailPrice) * 100 : 0
       return { name: p.name, dept: p.dept, stockQty, costPrice, retailPrice, stockValueCost, stockValueRetail, margin }
-    }).sort((a, b) => b.stockValueCost - a.stockValueCost)
+    })
   }, [products])
+
+  const data = useMemo(() => {
+    const sorted = [...base]
+    sorted.sort((a, b) => {
+      const av = a[sortKey as keyof typeof a]
+      const bv = b[sortKey as keyof typeof b]
+      if (typeof av === 'string' && typeof bv === 'string') {
+        return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av)
+      }
+      return sortDir === 'asc' ? (av as number) - (bv as number) : (bv as number) - (av as number)
+    })
+    return sorted
+  }, [base, sortKey, sortDir])
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
+
+  const sortIndicator = (key: string) => {
+    if (sortKey !== key) return ''
+    return sortDir === 'asc' ? ' ▲' : ' ▼'
+  }
+
+  const col = (label: string, key: string) => (
+    <th onClick={() => handleSort(key)} style={{ cursor: 'pointer', userSelect: 'none' }}>
+      {label}{sortIndicator(key)}
+    </th>
+  )
 
   const handleExport = () => {
     const headers = ['Product', 'Dept', 'Stock Qty', 'Cost Price', 'Retail Price', 'Stock Value (Cost)', 'Stock Value (Retail)', 'Margin %']
@@ -460,7 +495,10 @@ function InventoryValuationTab() {
       </div>
 
       <div className="table-wrap" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
-        <table><thead><tr><th>Product</th><th>Dept</th><th>Stock Qty</th><th>Cost Price</th><th>Retail Price</th><th>Value (Cost)</th><th>Value (Retail)</th><th>Margin %</th></tr></thead><tbody>
+        <table><thead><tr>
+          {col('Product', 'name')}{col('Dept', 'dept')}{col('Stock Qty', 'stockQty')}{col('Cost Price', 'costPrice')}{col('Retail Price', 'retailPrice')}
+          {col('Value (Cost)', 'stockValueCost')}{col('Value (Retail)', 'stockValueRetail')}{col('Margin %', 'margin')}
+        </tr></thead><tbody>
           {data.map(d => <tr key={d.name}>
             <td>{d.name}</td><td>{d.dept}</td><td>{d.stockQty}</td><td>{fmt(d.costPrice)}</td><td>{fmt(d.retailPrice)}</td>
             <td>{fmt(d.stockValueCost)}</td><td>{fmt(d.stockValueRetail)}</td>
