@@ -423,8 +423,6 @@ function InvoiceDetailTab() {
 }
 
 function InventoryValuationTab() {
-  const theme = useUIStore(s => s.theme)
-  const cc = getChartColors(theme)
   const [products, setProducts] = useState<Product[]>([])
 
   useEffect(() => {
@@ -439,18 +437,9 @@ function InventoryValuationTab() {
       const stockValueCost = stockQty * costPrice
       const stockValueRetail = stockQty * retailPrice
       const margin = retailPrice > 0 ? ((retailPrice - costPrice) / retailPrice) * 100 : 0
-      const ratio = (p.min_stock && p.min_stock > 0) ? stockQty / p.min_stock : 999
-      return { name: p.name, dept: p.dept, stockQty, costPrice, retailPrice, stockValueCost, stockValueRetail, margin, ratio, minStock: p.min_stock || 0 }
-    }).sort((a, b) => a.ratio - b.ratio)
+      return { name: p.name, dept: p.dept, stockQty, costPrice, retailPrice, stockValueCost, stockValueRetail, margin }
+    }).sort((a, b) => b.stockValueCost - a.stockValueCost)
   }, [products])
-
-  const chartData = data.slice(0, 20)
-
-  const colorForRatio = (ratio: number) => {
-    if (ratio >= 2) return 'var(--g)'
-    if (ratio >= 1) return 'var(--y)'
-    return 'var(--r)'
-  }
 
   const handleExport = () => {
     const headers = ['Product', 'Dept', 'Stock Qty', 'Cost Price', 'Retail Price', 'Stock Value (Cost)', 'Stock Value (Retail)', 'Margin %']
@@ -470,22 +459,7 @@ function InventoryValuationTab() {
         <button className="btn btn-sm btn-ghost" onClick={handlePrint}>PDF</button>
       </div>
 
-      <div className="rep-chart">
-        <h3>Stock Levels (Stock / Min Stock Ratio)</h3>
-        <ResponsiveContainer width="100%" height={400}>
-          <BarChart data={chartData} layout="vertical" margin={{ left: 120 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke={cc.grid} />
-            <XAxis type="number" tick={{ fontSize: 10, fill: cc.line }} />
-            <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: cc.line }} width={110} />
-            <Tooltip contentStyle={{ background: cc.tooltipBg, border: '1px solid var(--bd)', borderRadius: 6, fontSize: 12, color: cc.tooltipText }} formatter={(v: any) => Number(v).toFixed(1)} />
-            <Bar dataKey="ratio" radius={[0, 3, 3, 0]}>
-              {chartData.map((d, i) => <Cell key={i} fill={colorForRatio(d.ratio)} />)}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="table-wrap">
+      <div className="table-wrap" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
         <table><thead><tr><th>Product</th><th>Dept</th><th>Stock Qty</th><th>Cost Price</th><th>Retail Price</th><th>Value (Cost)</th><th>Value (Retail)</th><th>Margin %</th></tr></thead><tbody>
           {data.map(d => <tr key={d.name}>
             <td>{d.name}</td><td>{d.dept}</td><td>{d.stockQty}</td><td>{fmt(d.costPrice)}</td><td>{fmt(d.retailPrice)}</td>
