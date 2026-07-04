@@ -706,7 +706,6 @@ export function InventoryPage() {
               </div>
             </div>
           </div>
-        )}
       </Modal>
     </div>
   )
